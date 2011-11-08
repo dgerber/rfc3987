@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2011 Daniel Gerber.
@@ -27,7 +28,8 @@ Regular expressions for URI (rfc3896) and IRI (rfc3987) validation.
     ...                          u'port': None, u'path': u'/html/rfc3986',
     ...                          u'query': None, u'fragment': u'appendix-A'}
     >>> assert not u.match(u'urn:\U00010300')
-    >>> assert regex.compile('^%s$' % patterns['ipath']).match(u'\U00010300')
+    >>> assert regex.match('^%s$' % patterns['IRI'], u'urn:\U00010300')
+    >>> assert not regex.match('^%s$' % patterns['relative_ref'], '#f#g')
 
 """
 try:
@@ -191,3 +193,16 @@ patterns = {}
 for name, rule in _common_rules[::-1] + _uri_rules[::-1] + _iri_rules[::-1]:
     patterns[name] = rule.format(**patterns)
 del name, rule
+
+if __name__ == '__main__':
+    import sys
+    if not sys.argv[1:]:
+        print 'Valid arguments are "--all" or rule names from'
+        print '  '.join(sorted(patterns))
+    elif sys.argv[1] == '--all':
+        for name in patterns:
+            print name, ':\n', repr(patterns[name]).strip('u')[1:-1], '\n'
+    else:
+        for name in sys.argv[1:]:
+            print repr(patterns[name]).strip('u')[1:-1]
+    
