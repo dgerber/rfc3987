@@ -32,7 +32,7 @@ Regular expressions for URI (rfc3896) and IRI (rfc3987) validation.
     >>> assert not regex.match('^%s$' % patterns['relative_ref'], '#f#g')
 
 """
-__version__ = '1.0'
+__version__ = '1.1'
 
 try:
     import regex
