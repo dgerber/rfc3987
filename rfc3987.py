@@ -32,6 +32,8 @@ Regular expressions for URI (rfc3896) and IRI (rfc3987) validation.
     >>> assert not regex.match('^%s$' % patterns['relative_ref'], '#f#g')
 
 """
+__version__ = '1.0'
+
 try:
     import regex
 except ImportError:
@@ -46,10 +48,10 @@ __all__ = ('patterns', )
 _common_rules = (
 
     ########   SCHEME   ########
-    ('scheme',        u"(?P<scheme>[a-zA-Z][a-zA-Z0-9+.-]*)"),            #named
+    ('scheme',        u"(?P<scheme>[a-zA-Z][a-zA-Z0-9+.-]*)"),          # named
 
     ########   PORT   ########
-    ('port',          u"(?P<port>[0-9]*)"),                               #named
+    ('port',          u"(?P<port>[0-9]*)"),                             # named
 
     ########   IP ADDRESSES   ########
     ('IP_literal',  ur"\[(?:{IPv6address}|{IPvFuture})\]"),
@@ -81,45 +83,45 @@ _common_rules = (
 
 _uri_rules = (
 
-    ########   REFERENCES   ########    
+    ########   REFERENCES   ########
     ('URI_reference',   u"{URI}|{relative_ref}"),
     ('URI',             ur"{absolute_URI}(?:\#{fragment})?"),
     ('absolute_URI',    ur"{scheme}:{hier_part}(?:\?{query})?"),
     ('relative_ref',   (u"(?:{relative_part}"
                         ur"(?:\?{query})?(?:\#{fragment})?)")),
-    
+
     ('hier_part',      (u"(?://{authority}{path_abempty}"
                         u"|{path_absolute}|{path_rootless}|{path_empty})")),
     ('relative_part',  (u"(?://{authority}{path_abempty}"
                         u"|{path_absolute}|{path_noscheme}|{path_empty})")),
-    
+
     ########   AUTHORITY   ########
-    ('authority',(u"(?P<authority>"                                       #named
+    ('authority',(u"(?P<authority>"                                     # named
                   u"(?:{userinfo}@)?{host}(?::{port})?)")),
-    ('host',      u"(?P<host>{IP_literal}|{IPv4address}|{reg_name})"),    #named
-    ('userinfo', (u"(?P<userinfo>"                                        #named
+    ('host',      u"(?P<host>{IP_literal}|{IPv4address}|{reg_name})"),  # named
+    ('userinfo', (u"(?P<userinfo>"                                      # named
                   u"(?:{unreserved}|{pct_encoded}|{sub_delims}|:)*)")),
     ('reg_name',  u"(?:{unreserved}|{pct_encoded}|{sub_delims})*"),
-    
+
     ########   PATH   ########
     ('path',         (u"{path_abempty}|{path_absolute}|{path_noscheme}"
                       u"|{path_rootless}|{path_empty}")),
-    ('path_abempty',  u"(?P<path>(?:/{segment})*)"),                      #named
-    ('path_absolute', u"(?P<path>/(?:{segment_nz}(?:/{segment})*)?)"),    #named
-    ('path_noscheme', u"(?P<path>{segment_nz_nc}(?:/{segment})*)"),       #named
-    ('path_rootless', u"(?P<path>{segment_nz}(?:/{segment})*)"),          #named
-    ('path_empty',    u"(?P<path>)"),                                     #named
-    
+    ('path_abempty',  u"(?P<path>(?:/{segment})*)"),                    # named
+    ('path_absolute', u"(?P<path>/(?:{segment_nz}(?:/{segment})*)?)"),  # named
+    ('path_noscheme', u"(?P<path>{segment_nz_nc}(?:/{segment})*)"),     # named
+    ('path_rootless', u"(?P<path>{segment_nz}(?:/{segment})*)"),        # named
+    ('path_empty',    u"(?P<path>)"),                                   # named
+
     ('segment',       u"{pchar}*"),
     ('segment_nz',    u"{pchar}+"),
     ('segment_nz_nc', u"(?:{unreserved}|{pct_encoded}|{sub_delims}|@)+"),
-    
+
     ########   QUERY   ########
-    ('query',         ur"(?P<query>(?:{pchar}|/|\?)*)"),                  #named
-    
+    ('query',         ur"(?P<query>(?:{pchar}|/|\?)*)"),                # named
+
     ########   FRAGMENT   ########
-    ('fragment',      ur"(?P<fragment>(?:{pchar}|/|\?)*)"),               #named
-    
+    ('fragment',      ur"(?P<fragment>(?:{pchar}|/|\?)*)"),             # named
+
     ########  CHARACTER CLASSES   ########
     ('pchar',         u"(?:{unreserved}|{pct_encoded}|{sub_delims}|:|@)"),
     ('unreserved',    u"[a-zA-Z0-9._~-]"),
@@ -145,33 +147,33 @@ _iri_rules = (
 
 
     ########   AUTHORITY   ########
-    ('iauthority',(u"(?P<iauthority>"                                     #named
+    ('iauthority',(u"(?P<iauthority>"                                   # named
                    u"(?:{iuserinfo}@)?{ihost}(?::{port})?)")),
-    ('iuserinfo', (u"(?P<iuserinfo>"                                      #named
+    ('iuserinfo', (u"(?P<iuserinfo>"                                    # named
                    u"(?:{iunreserved}|{pct_encoded}|{sub_delims}|:)*)")),
-    ('ihost',      u"(?P<ihost>{IP_literal}|{IPv4address}|{ireg_name})"), #named
-    
+    ('ihost',      u"(?P<ihost>{IP_literal}|{IPv4address}|{ireg_name})"),#named
+
     ('ireg_name',  u"(?:{iunreserved}|{pct_encoded}|{sub_delims})*"),
-    
+
     ########   PATH   ########
     ('ipath',         (u"{ipath_abempty}|{ipath_absolute}|{ipath_noscheme}"
                        u"|{ipath_rootless}|{ipath_empty}")),
 
-    ('ipath_empty',    u"(?P<ipath>)"),                                   #named
-    ('ipath_rootless', u"(?P<ipath>{isegment_nz}(?:/{isegment})*)"),      #named
-    ('ipath_noscheme', u"(?P<ipath>{isegment_nz_nc}(?:/{isegment})*)"),   #named
+    ('ipath_empty',    u"(?P<ipath>)"),                                 # named
+    ('ipath_rootless', u"(?P<ipath>{isegment_nz}(?:/{isegment})*)"),    # named
+    ('ipath_noscheme', u"(?P<ipath>{isegment_nz_nc}(?:/{isegment})*)"), # named
     ('ipath_absolute', u"(?P<ipath>/(?:{isegment_nz}(?:/{isegment})*)?)"),#named
-    ('ipath_abempty',  u"(?P<ipath>(?:/{isegment})*)"),                   #named
-    
+    ('ipath_abempty',  u"(?P<ipath>(?:/{isegment})*)"),                 # named
+
     ('isegment_nz_nc', u"(?:{iunreserved}|{pct_encoded}|{sub_delims}|@)+"),
     ('isegment_nz',    u"{ipchar}+"),
     ('isegment',       u"{ipchar}*"),
-    
+
     ########   QUERY   ########
-    ('iquery',    ur"(?P<iquery>(?:{ipchar}|{iprivate}|/|\?)*)"),         #named
-    
+    ('iquery',    ur"(?P<iquery>(?:{ipchar}|{iprivate}|/|\?)*)"),       # named
+
     ########   FRAGMENT   ########
-    ('ifragment', ur"(?P<ifragment>(?:{ipchar}|/|\?)*)"),                 #named
+    ('ifragment', ur"(?P<ifragment>(?:{ipchar}|/|\?)*)"),               # named
 
     ########   CHARACTER CLASSES   ########
     ('ipchar',      u"(?:{iunreserved}|{pct_encoded}|{sub_delims}|:|@)"),
@@ -185,7 +187,7 @@ _iri_rules = (
                  u"\U00090000-\U0009FFFD\U000A0000-\U000AFFFD"
                  u"\U000B0000-\U000BFFFD\U000C0000-\U000CFFFD"
                  u"\U000D0000-\U000DFFFD\U000E1000-\U000EFFFD]")),
-    
+
 )
 
 #: mapping of rfc3986 / rfc3987 rule names to regular expressions
@@ -205,4 +207,3 @@ if __name__ == '__main__':
     else:
         for name in sys.argv[1:]:
             print repr(patterns[name]).strip('u')[1:-1]
-    
