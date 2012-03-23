@@ -19,7 +19,6 @@
 """
 Regular expressions for URI (rfc3896) and IRI (rfc3987) validation.
 
-    >>> import regex
     >>> u = regex.compile('^%s$' % patterns['URI'])
     >>> m = u.match(u'http://tools.ietf.org/html/rfc3986#appendix-A')
     >>> assert m.groupdict() == {u'scheme': u'http',
@@ -37,12 +36,13 @@ __version__ = '1.1'
 try:
     import regex
 except ImportError:
-    from warnings import warn as _warn
-    _warn('Could not import regex. The stdlib re (at least until python 3.2) '
-          'cannot compile most regular expressions in this module (reusing '
-          'capture group names on different branches of an alternation).')
+    from warnings import warn
+    warn('Could not import regex. The stdlib re (at least until python 3.2) '
+         'cannot compile most regular expressions in this module (reusing '
+         'capture group names on different branches of an alternation).')
+    del warn
 
-__all__ = ('patterns', )
+__all__ = ('patterns', 'compose', 'resolve')
 
 
 _common_rules = (
@@ -196,7 +196,150 @@ for name, rule in _common_rules[::-1] + _uri_rules[::-1] + _iri_rules[::-1]:
     patterns[name] = rule.format(**patterns)
 del name, rule
 
-if __name__ == '__main__':
+
+def _get_compiled_pattern(template='^%(IRI_reference)s$'):
+    c = _get_compiled_pattern._cache
+    if template not in c:
+        c[ template]  = regex.compile(template % patterns)
+    return c[template]
+_get_compiled_pattern._cache = {}
+
+
+def _i2u(dic):
+    for (name, iname) in [('authority', 'iauthority'), ('path', 'ipath'),
+                          ('query', 'iquery'), ('fragment', 'ifragment')]:
+        if not dic.get(name):
+            dic[name] = dic.get(iname)
+
+
+def compose(scheme=None, authority=None, path='', query=None, fragment=None,
+            iauthority=None, ipath='', iquery=None, ifragment=None, **kw):
+    "Returns an URI reference composed from named parts."
+    _i2u(locals())
+    res = ''
+    if scheme is not None:
+        res += scheme + ':'
+        if authority is not None:
+            res += '//' + authority
+        res += path
+        if query is not None:
+            res += '?' + query
+        if fragment is not None:
+            res += '#' + fragment
+    return res
+
+
+def resolve(base, uriref, strict=True, return_parts=False):
+    """Returns the resolved URI or a dict of its parts.
+    
+    # 5.4. Reference Resolution Examples
+    >>> base = "http://a/b/c/d;p?q"
+    >>> for relative, resolved in {
+    ...     "g:h"           :  "g:h",
+    ...     "g"             :  "http://a/b/c/g",
+    ...     "./g"           :  "http://a/b/c/g",
+    ...     "g/"            :  "http://a/b/c/g/",
+    ...     "/g"            :  "http://a/g",
+    ...     "//g"           :  "http://g",
+    ...     "?y"            :  "http://a/b/c/d;p?y",
+    ...     "g?y"           :  "http://a/b/c/g?y",
+    ...     "#s"            :  "http://a/b/c/d;p?q#s",
+    ...     "g#s"           :  "http://a/b/c/g#s",
+    ...     "g?y#s"         :  "http://a/b/c/g?y#s",
+    ...     ";x"            :  "http://a/b/c/;x",
+    ...     "g;x"           :  "http://a/b/c/g;x",
+    ...     "g;x?y#s"       :  "http://a/b/c/g;x?y#s",
+    ...     ""              :  "http://a/b/c/d;p?q",
+    ...     "."             :  "http://a/b/c/",
+    ...     "./"            :  "http://a/b/c/",
+    ...     ".."            :  "http://a/b/",
+    ...     "../"           :  "http://a/b/",
+    ...     "../g"          :  "http://a/b/g",
+    ...     "../.."         :  "http://a/",
+    ...     "../../"        :  "http://a/",
+    ...     "../../g"       :  "http://a/g",
+    ...     "../../../g"    :  "http://a/g",
+    ...     "../../../../g" :  "http://a/g",
+    ...     "/./g"          :  "http://a/g",
+    ...     "/../g"         :  "http://a/g",
+    ...     "g."            :  "http://a/b/c/g.",
+    ...     ".g"            :  "http://a/b/c/.g",
+    ...     "g.."           :  "http://a/b/c/g..",
+    ...     "..g"           :  "http://a/b/c/..g",
+    ...     "./../g"        :  "http://a/b/g",
+    ...     "./g/."         :  "http://a/b/c/g/",
+    ...     "g/./h"         :  "http://a/b/c/g/h",
+    ...     "g/../h"        :  "http://a/b/c/h",
+    ...     "g;x=1/./y"     :  "http://a/b/c/g;x=1/y",
+    ...     "g;x=1/../y"    :  "http://a/b/c/y",
+    ...     }.iteritems():
+    ...     assert resolve(base, relative) == resolved
+
+    """
+    #base = normalize(base)
+    if isinstance(base, basestring):
+        m = _get_compiled_pattern('^%(IRI)s$').match(base)
+        if not m:
+            raise ValueError('Invalid base IRI %r.' % base)
+        B = m.groupdict()
+    _i2u(B)
+    if not B.get('scheme'):
+        raise ValueError('Expected an IRI (with scheme), not %r.' % base)
+    
+    if isinstance(uriref, basestring):
+        m = _get_compiled_pattern('%(IRI_reference)s$').match(uriref)
+        if not m:
+            raise ValueError('Invalid IRI reference %r.' % uriref)
+        R = m.groupdict()
+    _i2u(R)
+    
+    _last_segment = _get_compiled_pattern('(?<=^|/)%(segment)s$')
+    _dot_segments = _get_compiled_pattern(r'^\.{1,2}(?:/|$)|(?<=/)\.(?:/|$)')
+    _2dots_segments = _get_compiled_pattern(r'/?%(segment)s/\.{2}(?:/|$)')
+    
+    if R['scheme'] and (strict or R['scheme'] != B['scheme']):
+        T = R
+    else:
+        T = {}
+        T['scheme'] = B['scheme']
+        if R['authority'] is not None:
+            T['authority'] = R['authority']
+            T['path'] = R['path']
+            T['query'] = R['query']
+        else:
+            T['authority'] = B['authority']
+            if R['path']:
+                if R['path'][:1] == "/":
+                    T['path'] = R['path']
+                elif B['authority'] is not None and not B['path']:
+                    T['path'] = '/%s' % R['path']
+                else:
+                    T['path'] = _last_segment.sub(R['path'], B['path'])
+                T['query'] = R['query']
+            else:
+                T['path'] = B['path']
+                if R['query'] is not None:
+                    T['query'] = R['query']
+                else:
+                    T['query'] = B['query']
+        T['fragment'] = R['fragment']
+    T['path'] =  _dot_segments.sub('', T['path'])
+    c = 1
+    while c:
+        T['path'], c =  _2dots_segments.subn('/', T['path'], 1)
+    if return_parts:
+        return T
+    else:
+        return compose(**T)
+
+
+def normalize(uri):
+    "Syntax-Based Normalization"
+    # TODO:
+    raise NotImplementedError
+
+
+if __name__ == '__main__':    
     import sys
     if not sys.argv[1:]:
         print 'Valid arguments are "--all" or rule names from'
