@@ -3,7 +3,8 @@
 from distutils.core import setup
 from rfc3987 import __version__
 
-with open('README.rst') as f:
+import os.path
+with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as f:
     long_description = f.read()
 
 setup(name='rfc3987',
@@ -14,6 +15,7 @@ setup(name='rfc3987',
       url='https://github.com/dgerber/rfc3987',
       py_modules=['rfc3987'],
       requires=['regex'],
+      keywords='url uri iri rfc3986 rfc3987 validation',
       classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
