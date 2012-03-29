@@ -219,13 +219,13 @@ def compose(scheme=None, authority=None, path='', query=None, fragment=None,
     res = ''
     if scheme is not None:
         res += scheme + ':'
-        if authority is not None:
-            res += '//' + authority
-        res += path
-        if query is not None:
-            res += '?' + query
-        if fragment is not None:
-            res += '#' + fragment
+    if authority is not None:
+        res += '//' + authority
+    res += path
+    if query is not None:
+        res += '?' + query
+    if fragment is not None:
+        res += '#' + fragment
     return res
 
 
