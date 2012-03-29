@@ -17,18 +17,39 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Regular expressions for URI (rfc3896) and IRI (rfc3987) validation.
+Parsing and validation of URIs (RFC 3896) and IRIs (RFC 3987).
+
+This module provides regular expressions according to `RFC 3986`_ "Uniform 
+Resource Identifier (URI): Generic Syntax" and `RFC 3987`_ "Internationalized 
+Resource Identifiers (IRIs)".
+
+
+patterns
+    A mapping of regular expressions keyed by `rule names for URIs`_ and 
+    `rule names for IRIs`_.
 
     >>> u = regex.compile('^%s$' % patterns['URI'])
     >>> m = u.match(u'http://tools.ietf.org/html/rfc3986#appendix-A')
-    >>> assert m.groupdict() == {u'scheme': u'http',
-    ...                          u'authority': u'tools.ietf.org',
-    ...                          u'userinfo': None, u'host': u'tools.ietf.org',
-    ...                          u'port': None, u'path': u'/html/rfc3986',
-    ...                          u'query': None, u'fragment': u'appendix-A'}
+    >>> assert m.groupdict() == dict(scheme=u'http',
+    ...                              authority=u'tools.ietf.org',
+    ...                              userinfo=None, host=u'tools.ietf.org',
+    ...                              port=None, path=u'/html/rfc3986',
+    ...                              query=None, fragment=u'appendix-A')
     >>> assert not u.match(u'urn:\U00010300')
     >>> assert regex.match('^%s$' % patterns['IRI'], u'urn:\U00010300')
     >>> assert not regex.match('^%s$' % patterns['relative_ref'], '#f#g')
+    
+compose
+    {compose.__doc__}
+
+resolve
+    {resolve.__doc__}
+
+
+.. _RFC 3986: http://tools.ietf.org/html/rfc3986
+.. _RFC 3987: http://tools.ietf.org/html/rfc3987
+.. _rule names for URIs: http://tools.ietf.org/html/rfc3986#appendix-A
+.. _rule names for IRIs: http://tools.ietf.org/html/rfc3987#section-2.2
 
 """
 __version__ = '1.2'
@@ -200,7 +221,7 @@ del name, rule
 def _get_compiled_pattern(template='^%(IRI_reference)s$'):
     c = _get_compiled_pattern._cache
     if template not in c:
-        c[ template]  = regex.compile(template % patterns)
+        c[template] = regex.compile(template % patterns)
     return c[template]
 _get_compiled_pattern._cache = {}
 
@@ -214,7 +235,10 @@ def _i2u(dic):
 
 def compose(scheme=None, authority=None, path='', query=None, fragment=None,
             iauthority=None, ipath='', iquery=None, ifragment=None, **kw):
-    "Returns an URI reference composed from named parts."
+    """Returns an URI composed_ from named parts.
+
+    .. _composed: http://tools.ietf.org/html/rfc3986#section-5.3
+    """
     _i2u(locals())
     res = ''
     if scheme is not None:
@@ -230,50 +254,57 @@ def compose(scheme=None, authority=None, path='', query=None, fragment=None,
 
 
 def resolve(base, uriref, strict=True, return_parts=False):
-    """Returns the resolved URI or a dict of its parts.
+    """Resolves_ an `URI reference` relative to a `base` URI.
+
+    :param return_parts: if True, returns a dict of named parts
+                         instead of a string
     
-    # 5.4. Reference Resolution Examples
-    >>> base = "http://a/b/c/d;p?q"
-    >>> for relative, resolved in {
-    ...     "g:h"           :  "g:h",
-    ...     "g"             :  "http://a/b/c/g",
-    ...     "./g"           :  "http://a/b/c/g",
-    ...     "g/"            :  "http://a/b/c/g/",
-    ...     "/g"            :  "http://a/g",
-    ...     "//g"           :  "http://g",
-    ...     "?y"            :  "http://a/b/c/d;p?y",
-    ...     "g?y"           :  "http://a/b/c/g?y",
-    ...     "#s"            :  "http://a/b/c/d;p?q#s",
-    ...     "g#s"           :  "http://a/b/c/g#s",
-    ...     "g?y#s"         :  "http://a/b/c/g?y#s",
-    ...     ";x"            :  "http://a/b/c/;x",
-    ...     "g;x"           :  "http://a/b/c/g;x",
-    ...     "g;x?y#s"       :  "http://a/b/c/g;x?y#s",
-    ...     ""              :  "http://a/b/c/d;p?q",
-    ...     "."             :  "http://a/b/c/",
-    ...     "./"            :  "http://a/b/c/",
-    ...     ".."            :  "http://a/b/",
-    ...     "../"           :  "http://a/b/",
-    ...     "../g"          :  "http://a/b/g",
-    ...     "../.."         :  "http://a/",
-    ...     "../../"        :  "http://a/",
-    ...     "../../g"       :  "http://a/g",
-    ...     "../../../g"    :  "http://a/g",
-    ...     "../../../../g" :  "http://a/g",
-    ...     "/./g"          :  "http://a/g",
-    ...     "/../g"         :  "http://a/g",
-    ...     "g."            :  "http://a/b/c/g.",
-    ...     ".g"            :  "http://a/b/c/.g",
-    ...     "g.."           :  "http://a/b/c/g..",
-    ...     "..g"           :  "http://a/b/c/..g",
-    ...     "./../g"        :  "http://a/b/g",
-    ...     "./g/."         :  "http://a/b/c/g/",
-    ...     "g/./h"         :  "http://a/b/c/g/h",
-    ...     "g/../h"        :  "http://a/b/c/h",
-    ...     "g;x=1/./y"     :  "http://a/b/c/g;x=1/y",
-    ...     "g;x=1/../y"    :  "http://a/b/c/y",
-    ...     }.iteritems():
-    ...     assert resolve(base, relative) == resolved
+    `Test cases <http://tools.ietf.org/html/rfc3986#section-5.4>`_::
+    
+        >>> base = "http://a/b/c/d;p?q"
+        >>> for relative, resolved in {
+        ...     "g:h"           :  "g:h",
+        ...     "g"             :  "http://a/b/c/g",
+        ...     "./g"           :  "http://a/b/c/g",
+        ...     "g/"            :  "http://a/b/c/g/",
+        ...     "/g"            :  "http://a/g",
+        ...     "//g"           :  "http://g",
+        ...     "?y"            :  "http://a/b/c/d;p?y",
+        ...     "g?y"           :  "http://a/b/c/g?y",
+        ...     "#s"            :  "http://a/b/c/d;p?q#s",
+        ...     "g#s"           :  "http://a/b/c/g#s",
+        ...     "g?y#s"         :  "http://a/b/c/g?y#s",
+        ...     ";x"            :  "http://a/b/c/;x",
+        ...     "g;x"           :  "http://a/b/c/g;x",
+        ...     "g;x?y#s"       :  "http://a/b/c/g;x?y#s",
+        ...     ""              :  "http://a/b/c/d;p?q",
+        ...     "."             :  "http://a/b/c/",
+        ...     "./"            :  "http://a/b/c/",
+        ...     ".."            :  "http://a/b/",
+        ...     "../"           :  "http://a/b/",
+        ...     "../g"          :  "http://a/b/g",
+        ...     "../.."         :  "http://a/",
+        ...     "../../"        :  "http://a/",
+        ...     "../../g"       :  "http://a/g",
+        ...     "../../../g"    :  "http://a/g",
+        ...     "../../../../g" :  "http://a/g",
+        ...     "/./g"          :  "http://a/g",
+        ...     "/../g"         :  "http://a/g",
+        ...     "g."            :  "http://a/b/c/g.",
+        ...     ".g"            :  "http://a/b/c/.g",
+        ...     "g.."           :  "http://a/b/c/g..",
+        ...     "..g"           :  "http://a/b/c/..g",
+        ...     "./../g"        :  "http://a/b/g",
+        ...     "./g/."         :  "http://a/b/c/g/",
+        ...     "g/./h"         :  "http://a/b/c/g/h",
+        ...     "g/../h"        :  "http://a/b/c/h",
+        ...     "g;x=1/./y"     :  "http://a/b/c/g;x=1/y",
+        ...     "g;x=1/../y"    :  "http://a/b/c/y",
+        ...     }.iteritems():
+        ...     assert resolve(base, relative) == resolved
+
+        
+    .. _Resolves: http://tools.ietf.org/html/rfc3986#section-5.2
 
     """
     #base = normalize(base)
