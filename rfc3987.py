@@ -218,11 +218,13 @@ for name, rule in _common_rules[::-1] + _uri_rules[::-1] + _iri_rules[::-1]:
 del name, rule
 
 
-def _get_compiled_pattern(template='^%(IRI_reference)s$'):
+def _get_compiled_pattern(rule='^%(IRI_reference)s$'):
+    """Returns a compiled pattern object from a rule name or template."""
     c = _get_compiled_pattern._cache
-    if template not in c:
-        c[template] = regex.compile(template % patterns)
-    return c[template]
+    if rule not in c:
+        obj = rule if rule in patterns else (rule % patterns)
+        c[rule] = regex.compile(obj)
+    return c[rule]
 _get_compiled_pattern._cache = {}
 
 
