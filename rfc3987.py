@@ -21,38 +21,38 @@ Parsing and validation of URIs (RFC 3896) and IRIs (RFC 3987).
 
 This module provides regular expressions according to `RFC 3986`_ "Uniform 
 Resource Identifier (URI): Generic Syntax" and `RFC 3987`_ "Internationalized 
-Resource Identifiers (IRIs)".
+Resource Identifiers (IRIs)", and utilities for composition and relative
+resolution:
 
-
-patterns
+*patterns*
     A mapping of regular expressions keyed by `rule names for URIs`_ and 
-    `rule names for IRIs`_.
+    `for IRIs`_. ::
 
-    >>> u = regex.compile('^%s$' % patterns['URI'])
-    >>> m = u.match(u'http://tools.ietf.org/html/rfc3986#appendix-A')
-    >>> assert m.groupdict() == dict(scheme=u'http',
-    ...                              authority=u'tools.ietf.org',
-    ...                              userinfo=None, host=u'tools.ietf.org',
-    ...                              port=None, path=u'/html/rfc3986',
-    ...                              query=None, fragment=u'appendix-A')
-    >>> assert not u.match(u'urn:\U00010300')
-    >>> assert regex.match('^%s$' % patterns['IRI'], u'urn:\U00010300')
-    >>> assert not regex.match('^%s$' % patterns['relative_ref'], '#f#g')
-    
-compose
+        >>> u = regex.compile('^%s$' % patterns['URI'])
+        >>> m = u.match(u'http://tools.ietf.org/html/rfc3986#appendix-A')
+        >>> assert m.groupdict() == dict(scheme=u'http',
+        ...                              authority=u'tools.ietf.org',
+        ...                              userinfo=None, host=u'tools.ietf.org',
+        ...                              port=None, path=u'/html/rfc3986',
+        ...                              query=None, fragment=u'appendix-A')
+        >>> assert not u.match(u'urn:\U00010300')
+        >>> assert regex.match('^%s$' % patterns['IRI'], u'urn:\U00010300')
+        >>> assert not regex.match('^%s$' % patterns['relative_ref'], '#f#g')
+
+*compose*
     {compose.__doc__}
 
-resolve
+*resolve*
     {resolve.__doc__}
 
 
 .. _RFC 3986: http://tools.ietf.org/html/rfc3986
 .. _RFC 3987: http://tools.ietf.org/html/rfc3987
 .. _rule names for URIs: http://tools.ietf.org/html/rfc3986#appendix-A
-.. _rule names for IRIs: http://tools.ietf.org/html/rfc3987#section-2.2
+.. _for IRIs: http://tools.ietf.org/html/rfc3987#section-2.2
 
 """
-__version__ = '1.2'
+__version__ = '1.2.1'
 
 try:
     import regex
@@ -256,8 +256,8 @@ def compose(scheme=None, authority=None, path='', query=None, fragment=None,
 def resolve(base, uriref, strict=True, return_parts=False):
     """Resolves_ an `URI reference` relative to a `base` URI.
 
-    :param return_parts: if True, returns a dict of named parts
-                         instead of a string
+    If `return_parts` is True, returns a dict of named parts instead of
+    a string.
     
     `Test cases <http://tools.ietf.org/html/rfc3986#section-5.4>`_::
     
