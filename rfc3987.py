@@ -222,7 +222,7 @@ def _get_compiled_pattern(rule='^%(IRI_reference)s$'):
     """Returns a compiled pattern object from a rule name or template."""
     c = _get_compiled_pattern._cache
     if rule not in c:
-        obj = patterns.get(rule) or patterns.get(rule % patterns)
+        obj = patterns.get(rule) or rule % patterns
         c[rule] = regex.compile(obj)
     return c[rule]
 _get_compiled_pattern._cache = {}
