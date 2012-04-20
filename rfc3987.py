@@ -32,11 +32,12 @@ relative resolution of references:
 
         >>> uri = regex.compile('^%s$' % patterns['URI'])
         >>> m = uri.match('http://tools.ietf.org/html/rfc3986#appendix-A')
-        >>> assert m.groupdict() == dict(scheme='http',
-        ...                              authority='tools.ietf.org',
-        ...                              userinfo=None, host='tools.ietf.org',
-        ...                              port=None, path='/html/rfc3986',
-        ...                              query=None, fragment='appendix-A')
+        >>> d = m.groupdict()
+        >>> assert all([ d['scheme'] == 'http',
+        ...              d['authority'] == 'tools.ietf.org',
+        ...              d['path'] == '/html/rfc3986',
+        ...              d['query'] == None,
+        ...              d['fragment'] == 'appendix-A' ])
         >>> from unicodedata import lookup
         >>> smp = 'urn:' + lookup('OLD ITALIC LETTER A')  # U+00010300
         >>> assert not uri.match(smp)
@@ -71,10 +72,10 @@ __all__ = ('patterns', 'compose', 'resolve')
 _common_rules = (
 
     ########   SCHEME   ########
-    ('scheme',       r"(?P<scheme>[a-zA-Z][a-zA-Z0-9+.-]*)"),           # named
+    ('scheme',       r"[a-zA-Z][a-zA-Z0-9+.-]*"),
 
     ########   PORT   ########
-    ('port',         r"(?P<port>[0-9]*)"),                              # named
+    ('port',         r"[0-9]*"),
 
     ########   IP ADDRESSES   ########
     ('IP_literal',   r"\[(?:{IPv6address}|{IPvFuture})\]"),
@@ -90,7 +91,7 @@ _common_rules = (
                       ).replace(' ', '')),
     ('ls32',         r"(?:{h16}:{h16}|{IPv4address})"),
     ('h16',          r"[0-9A-F]{{1,4}}"),
-    ('IPv4address',  r"(?:(?:{dec_octet}\.){{3}}{dec_octet})"),
+    ('IPv4address',  r"(?:{dec_octet}\.){{3}}{dec_octet}"),
     ('dec_octet',    r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"),
     ('IPvFuture',    r"v[0-9A-F]+\.(?:{unreserved}|{sub_delims}|:)+"),
 
@@ -107,43 +108,41 @@ _common_rules = (
 _uri_rules = (
 
     ########   REFERENCES   ########
-    ('URI_reference',   r"{URI}|{relative_ref}"),
+    ('URI_reference',   r"(?:{URI}|{relative_ref})"),
+    
     ('URI',             r"{absolute_URI}(?:\#{fragment})?"),
     ('absolute_URI',    r"{scheme}:{hier_part}(?:\?{query})?"),
-    ('relative_ref',   (r"(?:{relative_part}"
-                        r"(?:\?{query})?(?:\#{fragment})?)")),
-
     ('hier_part',      (r"(?://{authority}{path_abempty}"
                         r"|{path_absolute}|{path_rootless}|{path_empty})")),
+    
+    ('relative_ref',    r"{relative_part}(?:\?{query})?(?:\#{fragment})?"),
     ('relative_part',  (r"(?://{authority}{path_abempty}"
                         r"|{path_absolute}|{path_noscheme}|{path_empty})")),
 
     ########   AUTHORITY   ########
-    ('authority',(r"(?P<authority>"                                     # named
-                  r"(?:{userinfo}@)?{host}(?::{port})?)")),
-    ('host',      r"(?P<host>{IP_literal}|{IPv4address}|{reg_name})"),  # named
-    ('userinfo', (r"(?P<userinfo>"                                      # named
-                  r"(?:{unreserved}|{pct_encoded}|{sub_delims}|:)*)")),
+    ('authority', r"(?:{userinfo}@)?{host}(?::{port})?"),
+    ('host',      r"(?:{IP_literal}|{IPv4address}|{reg_name})"),
+    ('userinfo',  r"(?:{unreserved}|{pct_encoded}|{sub_delims}|:)*"),
     ('reg_name',  r"(?:{unreserved}|{pct_encoded}|{sub_delims})*"),
 
     ########   PATH   ########
     ('path',         (r"{path_abempty}|{path_absolute}|{path_noscheme}"
                       r"|{path_rootless}|{path_empty}")),
-    ('path_abempty',  r"(?P<path>(?:/{segment})*)"),                    # named
-    ('path_absolute', r"(?P<path>/(?:{segment_nz}(?:/{segment})*)?)"),  # named
-    ('path_noscheme', r"(?P<path>{segment_nz_nc}(?:/{segment})*)"),     # named
-    ('path_rootless', r"(?P<path>{segment_nz}(?:/{segment})*)"),        # named
-    ('path_empty',    r"(?P<path>)"),                                   # named
+    ('path_abempty',  r"(?:/{segment})*"),
+    ('path_absolute', r"/(?:{segment_nz}(?:/{segment})*)?"),
+    ('path_noscheme', r"{segment_nz_nc}(?:/{segment})*"),
+    ('path_rootless', r"{segment_nz}(?:/{segment})*"),
+    ('path_empty',    r""),
 
     ('segment',       r"{pchar}*"),
     ('segment_nz',    r"{pchar}+"),
     ('segment_nz_nc', r"(?:{unreserved}|{pct_encoded}|{sub_delims}|@)+"),
 
     ########   QUERY   ########
-    ('query',         r"(?P<query>(?:{pchar}|/|\?)*)"),                 # named
+    ('query',         r"(?:{pchar}|/|\?)*"),
 
     ########   FRAGMENT   ########
-    ('fragment',      r"(?P<fragment>(?:{pchar}|/|\?)*)"),              # named
+    ('fragment',      r"(?:{pchar}|/|\?)*"),
 
     ########  CHARACTER CLASSES   ########
     ('pchar',         r"(?:{unreserved}|{pct_encoded}|{sub_delims}|:|@)"),
@@ -157,7 +156,7 @@ _uri_rules = (
 _iri_rules = (
 
     ########   REFERENCES   ########
-    ('IRI_reference',   r"{IRI}|{irelative_ref}"),
+    ('IRI_reference',   r"(?:{IRI}|{irelative_ref})"),
     ('IRI',             r"{absolute_IRI}(?:\#{ifragment})?"),
     ('absolute_IRI',    r"{scheme}:{ihier_part}(?:\?{iquery})?"),
     ('irelative_ref',  (r"(?:{irelative_part}"
@@ -170,11 +169,9 @@ _iri_rules = (
 
 
     ########   AUTHORITY   ########
-    ('iauthority',(r"(?P<iauthority>"                                   # named
-                   r"(?:{iuserinfo}@)?{ihost}(?::{port})?)")),
-    ('iuserinfo', (r"(?P<iuserinfo>"                                    # named
-                   r"(?:{iunreserved}|{pct_encoded}|{sub_delims}|:)*)")),
-    ('ihost',      r"(?P<ihost>{IP_literal}|{IPv4address}|{ireg_name})"),#named
+    ('iauthority', r"(?:{iuserinfo}@)?{ihost}(?::{port})?"),
+    ('iuserinfo',  r"(?:{iunreserved}|{pct_encoded}|{sub_delims}|:)*"),
+    ('ihost',      r"(?:{IP_literal}|{IPv4address}|{ireg_name})"),
 
     ('ireg_name',  r"(?:{iunreserved}|{pct_encoded}|{sub_delims})*"),
 
@@ -182,21 +179,21 @@ _iri_rules = (
     ('ipath',         (r"{ipath_abempty}|{ipath_absolute}|{ipath_noscheme}"
                        r"|{ipath_rootless}|{ipath_empty}")),
 
-    ('ipath_empty',    r"(?P<ipath>)"),                                 # named
-    ('ipath_rootless', r"(?P<ipath>{isegment_nz}(?:/{isegment})*)"),    # named
-    ('ipath_noscheme', r"(?P<ipath>{isegment_nz_nc}(?:/{isegment})*)"), # named
-    ('ipath_absolute', r"(?P<ipath>/(?:{isegment_nz}(?:/{isegment})*)?)"),#named
-    ('ipath_abempty',  r"(?P<ipath>(?:/{isegment})*)"),                 # named
+    ('ipath_empty',    r""),
+    ('ipath_rootless', r"{isegment_nz}(?:/{isegment})*"),
+    ('ipath_noscheme', r"{isegment_nz_nc}(?:/{isegment})*"),
+    ('ipath_absolute', r"/(?:{isegment_nz}(?:/{isegment})*)?"),
+    ('ipath_abempty',  r"(?:/{isegment})*"),
 
     ('isegment_nz_nc', r"(?:{iunreserved}|{pct_encoded}|{sub_delims}|@)+"),
     ('isegment_nz',    r"{ipchar}+"),
     ('isegment',       r"{ipchar}*"),
 
     ########   QUERY   ########
-    ('iquery',    r"(?P<iquery>(?:{ipchar}|{iprivate}|/|\?)*)"),       # named
+    ('iquery',    r"(?:{ipchar}|{iprivate}|/|\?)*"),
 
     ########   FRAGMENT   ########
-    ('ifragment', r"(?P<ifragment>(?:{ipchar}|/|\?)*)"),               # named
+    ('ifragment', r"(?:{ipchar}|/|\?)*"),
 
     ########   CHARACTER CLASSES   ########
     ('ipchar',      r"(?:{iunreserved}|{pct_encoded}|{sub_delims}|:|@)"),
@@ -213,11 +210,34 @@ _iri_rules = (
 
 )
 
+
+def _format_patterns(named_capture_groups):
+    groups = dict((k, n.split()[0]) for n in named_capture_groups
+                  for k in n.split()[1:] or [n])
+    formatted = {}
+    for name, pat in _common_rules[::-1] + _uri_rules[::-1] + _iri_rules[::-1]:
+        if name in groups:
+            pat = '(?P<%s>%s)' % (groups[name], pat)
+        formatted[name] = pat.format(**formatted)
+    return formatted
+
 #: mapping of rfc3986 / rfc3987 rule names to regular expressions
-patterns = {}
-for name, rule in _common_rules[::-1] + _uri_rules[::-1] + _iri_rules[::-1]:
-    patterns[name] = rule.format(**patterns)
-del name, rule
+patterns = _format_patterns(named_capture_groups=[
+        'scheme', 'port',
+        'IPv6address', 'IPv4address', 'IPvFuture',
+        'URI_reference',
+        'URI', 'absolute_URI', 'relative_ref', 'relative_part',
+        'authority', 'host', 'userinfo', 'reg_name',
+        ('path path_abempty path_absolute path_noscheme'
+         ' path_rootless path_empty'),
+        'query', 'fragment',
+        'IRI_reference',
+        'IRI', 'absolute_IRI', 'irelative_ref', 'irelative_part',
+        'iauthority', 'ihost', 'iuserinfo', 'ireg_name',
+        ('ipath ipath_abempty ipath_absolute ipath_noscheme'
+         ' ipath_rootless ipath_empty'),
+        'iquery', 'ifragment',
+        ])
 
 
 def _get_compiled_pattern(rule='^%(IRI_reference)s$'):
