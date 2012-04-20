@@ -394,14 +394,15 @@ def normalize(uri):
     raise NotImplementedError
 
 
-if __name__ == '__main__':    
+if __name__ == '__main__':
     import sys
     if not sys.argv[1:]:
-        print 'Valid arguments are "--all" or rule names from'
-        print '  '.join(sorted(patterns))
+        print('Valid arguments are "--all" or rule names from:')
+        print('  '.join(sorted(patterns)))
     elif sys.argv[1] == '--all':
         for name in patterns:
-            print name, ':\n', repr(patterns[name]).strip('u')[1:-1], '\n'
+            print(name + ':')
+            print(patterns[name])
     else:
         for name in sys.argv[1:]:
-            print repr(patterns[name]).strip('u')[1:-1]
+            print(patterns[name])
