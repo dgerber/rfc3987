@@ -79,7 +79,7 @@ _common_rules = (
 
     ########   IP ADDRESSES   ########
     ('IP_literal',   r"\[(?:{IPv6address}|{IPvFuture})\]"),
-    ('IPv6address', (r"                                (?:{h16}:){{6}} {ls32}"
+    ('IPv6address', (r"(?:                             (?:{h16}:){{6}} {ls32}"
                      r"|                            :: (?:{h16}:){{5}} {ls32}"
                      r"|                    {h16}?  :: (?:{h16}:){{4}} {ls32}"
                      r"| (?:(?:{h16}:)?     {h16})? :: (?:{h16}:){{3}} {ls32}"
@@ -87,7 +87,7 @@ _common_rules = (
                      r"| (?:(?:{h16}:){{,3}}{h16})? :: (?:{h16}:)      {ls32}"
                      r"| (?:(?:{h16}:){{,4}}{h16})? ::                 {ls32}"
                      r"| (?:(?:{h16}:){{,5}}{h16})? ::                 {h16} "
-                     r"| (?:(?:{h16}:){{,6}}{h16})? ::                       "
+                     r"| (?:(?:{h16}:){{,6}}{h16})? ::                      )"
                       ).replace(' ', '')),
     ('ls32',         r"(?:{h16}:{h16}|{IPv4address})"),
     ('h16',          r"[0-9A-F]{{1,4}}"),
@@ -126,8 +126,8 @@ _uri_rules = (
     ('reg_name',  r"(?:{unreserved}|{pct_encoded}|{sub_delims})*"),
 
     ########   PATH   ########
-    ('path',         (r"{path_abempty}|{path_absolute}|{path_noscheme}"
-                      r"|{path_rootless}|{path_empty}")),
+    ('path',         (r"(?:{path_abempty}|{path_absolute}|{path_noscheme}"
+                      r"|{path_rootless}|{path_empty})")),
     ('path_abempty',  r"(?:/{segment})*"),
     ('path_absolute', r"/(?:{segment_nz}(?:/{segment})*)?"),
     ('path_noscheme', r"{segment_nz_nc}(?:/{segment})*"),
@@ -176,8 +176,8 @@ _iri_rules = (
     ('ireg_name',  r"(?:{iunreserved}|{pct_encoded}|{sub_delims})*"),
 
     ########   PATH   ########
-    ('ipath',         (r"{ipath_abempty}|{ipath_absolute}|{ipath_noscheme}"
-                       r"|{ipath_rootless}|{ipath_empty}")),
+    ('ipath',         (r"(?:{ipath_abempty}|{ipath_absolute}|{ipath_noscheme}"
+                       r"|{ipath_rootless}|{ipath_empty})")),
 
     ('ipath_empty',    r""),
     ('ipath_rootless', r"{isegment_nz}(?:/{isegment})*"),
