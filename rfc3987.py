@@ -30,15 +30,17 @@ relative resolution of references:
     A dict of regular expressions keyed by `rule names for URIs`_ and
     `rule names for IRIs`_. ::
 
-        >>> u = regex.compile('^%s$' % patterns['URI'])
-        >>> m = u.match(u'http://tools.ietf.org/html/rfc3986#appendix-A')
-        >>> assert m.groupdict() == dict(scheme=u'http',
-        ...                              authority=u'tools.ietf.org',
-        ...                              userinfo=None, host=u'tools.ietf.org',
-        ...                              port=None, path=u'/html/rfc3986',
-        ...                              query=None, fragment=u'appendix-A')
-        >>> assert not u.match(u'urn:\U00010300')
-        >>> assert regex.match('^%s$' % patterns['IRI'], u'urn:\U00010300')
+        >>> uri = regex.compile('^%s$' % patterns['URI'])
+        >>> m = uri.match('http://tools.ietf.org/html/rfc3986#appendix-A')
+        >>> assert m.groupdict() == dict(scheme='http',
+        ...                              authority='tools.ietf.org',
+        ...                              userinfo=None, host='tools.ietf.org',
+        ...                              port=None, path='/html/rfc3986',
+        ...                              query=None, fragment='appendix-A')
+        >>> from unicodedata import lookup
+        >>> smp = 'urn:' + lookup('OLD ITALIC LETTER A')  # U+00010300
+        >>> assert not uri.match(smp)
+        >>> assert regex.match('^%s$' % patterns['IRI'], smp)
         >>> assert not regex.match('^%s$' % patterns['relative_ref'], '#f#g')
 
 **compose**
@@ -69,35 +71,35 @@ __all__ = ('patterns', 'compose', 'resolve')
 _common_rules = (
 
     ########   SCHEME   ########
-    ('scheme',        u"(?P<scheme>[a-zA-Z][a-zA-Z0-9+.-]*)"),          # named
+    ('scheme',       r"(?P<scheme>[a-zA-Z][a-zA-Z0-9+.-]*)"),           # named
 
     ########   PORT   ########
-    ('port',          u"(?P<port>[0-9]*)"),                             # named
+    ('port',         r"(?P<port>[0-9]*)"),                              # named
 
     ########   IP ADDRESSES   ########
-    ('IP_literal',  ur"\[(?:{IPv6address}|{IPvFuture})\]"),
-    ('IPv6address', (u"                                (?:{h16}:){{6}} {ls32}"
-                     u"|                            :: (?:{h16}:){{5}} {ls32}"
-                     u"|                    {h16}?  :: (?:{h16}:){{4}} {ls32}"
-                     u"| (?:(?:{h16}:)?     {h16})? :: (?:{h16}:){{3}} {ls32}"
-                     u"| (?:(?:{h16}:){{,2}}{h16})? :: (?:{h16}:){{2}} {ls32}"
-                     u"| (?:(?:{h16}:){{,3}}{h16})? :: (?:{h16}:)      {ls32}"
-                     u"| (?:(?:{h16}:){{,4}}{h16})? ::                 {ls32}"
-                     u"| (?:(?:{h16}:){{,5}}{h16})? ::                 {h16} "
-                     u"| (?:(?:{h16}:){{,6}}{h16})? ::                       "
-                     ).replace(' ', '')),
-    ('ls32',         u"(?:{h16}:{h16}|{IPv4address})"),
-    ('h16',          u"[0-9A-F]{{1,4}}"),
-    ('IPv4address', ur"(?:(?:{dec_octet}\.){{3}}{dec_octet})"),
-    ('dec_octet',    u"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"),
-    ('IPvFuture',   ur"v[0-9A-F]+\.(?:{unreserved}|{sub_delims}|:)+"),
+    ('IP_literal',   r"\[(?:{IPv6address}|{IPvFuture})\]"),
+    ('IPv6address', (r"                                (?:{h16}:){{6}} {ls32}"
+                     r"|                            :: (?:{h16}:){{5}} {ls32}"
+                     r"|                    {h16}?  :: (?:{h16}:){{4}} {ls32}"
+                     r"| (?:(?:{h16}:)?     {h16})? :: (?:{h16}:){{3}} {ls32}"
+                     r"| (?:(?:{h16}:){{,2}}{h16})? :: (?:{h16}:){{2}} {ls32}"
+                     r"| (?:(?:{h16}:){{,3}}{h16})? :: (?:{h16}:)      {ls32}"
+                     r"| (?:(?:{h16}:){{,4}}{h16})? ::                 {ls32}"
+                     r"| (?:(?:{h16}:){{,5}}{h16})? ::                 {h16} "
+                     r"| (?:(?:{h16}:){{,6}}{h16})? ::                       "
+                      ).replace(' ', '')),
+    ('ls32',         r"(?:{h16}:{h16}|{IPv4address})"),
+    ('h16',          r"[0-9A-F]{{1,4}}"),
+    ('IPv4address',  r"(?:(?:{dec_octet}\.){{3}}{dec_octet})"),
+    ('dec_octet',    r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"),
+    ('IPvFuture',    r"v[0-9A-F]+\.(?:{unreserved}|{sub_delims}|:)+"),
 
     ########  CHARACTER CLASSES   ########
-    ('unreserved',    u"[a-zA-Z0-9_.~-]"),
-    ('reserved',      u"(?:{gen_delims}|{sub_delims})"),
-    ('pct_encoded',  ur"%[0-9A-F][0-9A-F]"),
-    ('gen_delims',   ur"[:/?#[\]@]"),
-    ('sub_delims',    u"[!$&'()*+,;=]"),
+    ('unreserved',    r"[a-zA-Z0-9_.~-]"),
+    ('reserved',      r"(?:{gen_delims}|{sub_delims})"),
+    ('pct_encoded',   r"%[0-9A-F][0-9A-F]"),
+    ('gen_delims',    r"[:/?#[\]@]"),
+    ('sub_delims',    r"[!$&'()*+,;=]"),
 
 )
 
@@ -105,47 +107,47 @@ _common_rules = (
 _uri_rules = (
 
     ########   REFERENCES   ########
-    ('URI_reference',   u"{URI}|{relative_ref}"),
-    ('URI',             ur"{absolute_URI}(?:\#{fragment})?"),
-    ('absolute_URI',    ur"{scheme}:{hier_part}(?:\?{query})?"),
-    ('relative_ref',   (u"(?:{relative_part}"
-                        ur"(?:\?{query})?(?:\#{fragment})?)")),
+    ('URI_reference',   r"{URI}|{relative_ref}"),
+    ('URI',             r"{absolute_URI}(?:\#{fragment})?"),
+    ('absolute_URI',    r"{scheme}:{hier_part}(?:\?{query})?"),
+    ('relative_ref',   (r"(?:{relative_part}"
+                        r"(?:\?{query})?(?:\#{fragment})?)")),
 
-    ('hier_part',      (u"(?://{authority}{path_abempty}"
-                        u"|{path_absolute}|{path_rootless}|{path_empty})")),
-    ('relative_part',  (u"(?://{authority}{path_abempty}"
-                        u"|{path_absolute}|{path_noscheme}|{path_empty})")),
+    ('hier_part',      (r"(?://{authority}{path_abempty}"
+                        r"|{path_absolute}|{path_rootless}|{path_empty})")),
+    ('relative_part',  (r"(?://{authority}{path_abempty}"
+                        r"|{path_absolute}|{path_noscheme}|{path_empty})")),
 
     ########   AUTHORITY   ########
-    ('authority',(u"(?P<authority>"                                     # named
-                  u"(?:{userinfo}@)?{host}(?::{port})?)")),
-    ('host',      u"(?P<host>{IP_literal}|{IPv4address}|{reg_name})"),  # named
-    ('userinfo', (u"(?P<userinfo>"                                      # named
-                  u"(?:{unreserved}|{pct_encoded}|{sub_delims}|:)*)")),
-    ('reg_name',  u"(?:{unreserved}|{pct_encoded}|{sub_delims})*"),
+    ('authority',(r"(?P<authority>"                                     # named
+                  r"(?:{userinfo}@)?{host}(?::{port})?)")),
+    ('host',      r"(?P<host>{IP_literal}|{IPv4address}|{reg_name})"),  # named
+    ('userinfo', (r"(?P<userinfo>"                                      # named
+                  r"(?:{unreserved}|{pct_encoded}|{sub_delims}|:)*)")),
+    ('reg_name',  r"(?:{unreserved}|{pct_encoded}|{sub_delims})*"),
 
     ########   PATH   ########
-    ('path',         (u"{path_abempty}|{path_absolute}|{path_noscheme}"
-                      u"|{path_rootless}|{path_empty}")),
-    ('path_abempty',  u"(?P<path>(?:/{segment})*)"),                    # named
-    ('path_absolute', u"(?P<path>/(?:{segment_nz}(?:/{segment})*)?)"),  # named
-    ('path_noscheme', u"(?P<path>{segment_nz_nc}(?:/{segment})*)"),     # named
-    ('path_rootless', u"(?P<path>{segment_nz}(?:/{segment})*)"),        # named
-    ('path_empty',    u"(?P<path>)"),                                   # named
+    ('path',         (r"{path_abempty}|{path_absolute}|{path_noscheme}"
+                      r"|{path_rootless}|{path_empty}")),
+    ('path_abempty',  r"(?P<path>(?:/{segment})*)"),                    # named
+    ('path_absolute', r"(?P<path>/(?:{segment_nz}(?:/{segment})*)?)"),  # named
+    ('path_noscheme', r"(?P<path>{segment_nz_nc}(?:/{segment})*)"),     # named
+    ('path_rootless', r"(?P<path>{segment_nz}(?:/{segment})*)"),        # named
+    ('path_empty',    r"(?P<path>)"),                                   # named
 
-    ('segment',       u"{pchar}*"),
-    ('segment_nz',    u"{pchar}+"),
-    ('segment_nz_nc', u"(?:{unreserved}|{pct_encoded}|{sub_delims}|@)+"),
+    ('segment',       r"{pchar}*"),
+    ('segment_nz',    r"{pchar}+"),
+    ('segment_nz_nc', r"(?:{unreserved}|{pct_encoded}|{sub_delims}|@)+"),
 
     ########   QUERY   ########
-    ('query',         ur"(?P<query>(?:{pchar}|/|\?)*)"),                # named
+    ('query',         r"(?P<query>(?:{pchar}|/|\?)*)"),                 # named
 
     ########   FRAGMENT   ########
-    ('fragment',      ur"(?P<fragment>(?:{pchar}|/|\?)*)"),             # named
+    ('fragment',      r"(?P<fragment>(?:{pchar}|/|\?)*)"),              # named
 
     ########  CHARACTER CLASSES   ########
-    ('pchar',         u"(?:{unreserved}|{pct_encoded}|{sub_delims}|:|@)"),
-    ('unreserved',    u"[a-zA-Z0-9._~-]"),
+    ('pchar',         r"(?:{unreserved}|{pct_encoded}|{sub_delims}|:|@)"),
+    ('unreserved',    r"[a-zA-Z0-9._~-]"),
 
 )
 
@@ -155,59 +157,59 @@ _uri_rules = (
 _iri_rules = (
 
     ########   REFERENCES   ########
-    ('IRI_reference',   u"{IRI}|{irelative_ref}"),
-    ('IRI',             ur"{absolute_IRI}(?:\#{ifragment})?"),
-    ('absolute_IRI',    ur"{scheme}:{ihier_part}(?:\?{iquery})?"),
-    ('irelative_ref',  (u"(?:{irelative_part}"
-                        ur"(?:\?{iquery})?(?:\#{ifragment})?)")),
+    ('IRI_reference',   r"{IRI}|{irelative_ref}"),
+    ('IRI',             r"{absolute_IRI}(?:\#{ifragment})?"),
+    ('absolute_IRI',    r"{scheme}:{ihier_part}(?:\?{iquery})?"),
+    ('irelative_ref',  (r"(?:{irelative_part}"
+                        r"(?:\?{iquery})?(?:\#{ifragment})?)")),
 
-    ('ihier_part',     (u"(?://{iauthority}{ipath_abempty}"
-                        u"|{ipath_absolute}|{ipath_rootless}|{ipath_empty})")),
-    ('irelative_part', (u"(?://{iauthority}{ipath_abempty}"
-                        u"|{ipath_absolute}|{ipath_noscheme}|{ipath_empty})")),
+    ('ihier_part',     (r"(?://{iauthority}{ipath_abempty}"
+                        r"|{ipath_absolute}|{ipath_rootless}|{ipath_empty})")),
+    ('irelative_part', (r"(?://{iauthority}{ipath_abempty}"
+                        r"|{ipath_absolute}|{ipath_noscheme}|{ipath_empty})")),
 
 
     ########   AUTHORITY   ########
-    ('iauthority',(u"(?P<iauthority>"                                   # named
-                   u"(?:{iuserinfo}@)?{ihost}(?::{port})?)")),
-    ('iuserinfo', (u"(?P<iuserinfo>"                                    # named
-                   u"(?:{iunreserved}|{pct_encoded}|{sub_delims}|:)*)")),
-    ('ihost',      u"(?P<ihost>{IP_literal}|{IPv4address}|{ireg_name})"),#named
+    ('iauthority',(r"(?P<iauthority>"                                   # named
+                   r"(?:{iuserinfo}@)?{ihost}(?::{port})?)")),
+    ('iuserinfo', (r"(?P<iuserinfo>"                                    # named
+                   r"(?:{iunreserved}|{pct_encoded}|{sub_delims}|:)*)")),
+    ('ihost',      r"(?P<ihost>{IP_literal}|{IPv4address}|{ireg_name})"),#named
 
-    ('ireg_name',  u"(?:{iunreserved}|{pct_encoded}|{sub_delims})*"),
+    ('ireg_name',  r"(?:{iunreserved}|{pct_encoded}|{sub_delims})*"),
 
     ########   PATH   ########
-    ('ipath',         (u"{ipath_abempty}|{ipath_absolute}|{ipath_noscheme}"
-                       u"|{ipath_rootless}|{ipath_empty}")),
+    ('ipath',         (r"{ipath_abempty}|{ipath_absolute}|{ipath_noscheme}"
+                       r"|{ipath_rootless}|{ipath_empty}")),
 
-    ('ipath_empty',    u"(?P<ipath>)"),                                 # named
-    ('ipath_rootless', u"(?P<ipath>{isegment_nz}(?:/{isegment})*)"),    # named
-    ('ipath_noscheme', u"(?P<ipath>{isegment_nz_nc}(?:/{isegment})*)"), # named
-    ('ipath_absolute', u"(?P<ipath>/(?:{isegment_nz}(?:/{isegment})*)?)"),#named
-    ('ipath_abempty',  u"(?P<ipath>(?:/{isegment})*)"),                 # named
+    ('ipath_empty',    r"(?P<ipath>)"),                                 # named
+    ('ipath_rootless', r"(?P<ipath>{isegment_nz}(?:/{isegment})*)"),    # named
+    ('ipath_noscheme', r"(?P<ipath>{isegment_nz_nc}(?:/{isegment})*)"), # named
+    ('ipath_absolute', r"(?P<ipath>/(?:{isegment_nz}(?:/{isegment})*)?)"),#named
+    ('ipath_abempty',  r"(?P<ipath>(?:/{isegment})*)"),                 # named
 
-    ('isegment_nz_nc', u"(?:{iunreserved}|{pct_encoded}|{sub_delims}|@)+"),
-    ('isegment_nz',    u"{ipchar}+"),
-    ('isegment',       u"{ipchar}*"),
+    ('isegment_nz_nc', r"(?:{iunreserved}|{pct_encoded}|{sub_delims}|@)+"),
+    ('isegment_nz',    r"{ipchar}+"),
+    ('isegment',       r"{ipchar}*"),
 
     ########   QUERY   ########
-    ('iquery',    ur"(?P<iquery>(?:{ipchar}|{iprivate}|/|\?)*)"),       # named
+    ('iquery',    r"(?P<iquery>(?:{ipchar}|{iprivate}|/|\?)*)"),       # named
 
     ########   FRAGMENT   ########
-    ('ifragment', ur"(?P<ifragment>(?:{ipchar}|/|\?)*)"),               # named
+    ('ifragment', r"(?P<ifragment>(?:{ipchar}|/|\?)*)"),               # named
 
     ########   CHARACTER CLASSES   ########
-    ('ipchar',      u"(?:{iunreserved}|{pct_encoded}|{sub_delims}|:|@)"),
-    ('iunreserved', u"(?:[a-zA-Z0-9._~-]|{ucschar})"),
-    ('iprivate', u"[\uE000-\uF8FF\U000F0000-\U000FFFFD\U00100000-\U0010FFFD]"),
-    ('ucschar', (u"[\xA0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF"
-                 u"\U00010000-\U0001FFFD\U00020000-\U0002FFFD"
-                 u"\U00030000-\U0003FFFD\U00040000-\U0004FFFD"
-                 u"\U00050000-\U0005FFFD\U00060000-\U0006FFFD"
-                 u"\U00070000-\U0007FFFD\U00080000-\U0008FFFD"
-                 u"\U00090000-\U0009FFFD\U000A0000-\U000AFFFD"
-                 u"\U000B0000-\U000BFFFD\U000C0000-\U000CFFFD"
-                 u"\U000D0000-\U000DFFFD\U000E1000-\U000EFFFD]")),
+    ('ipchar',      r"(?:{iunreserved}|{pct_encoded}|{sub_delims}|:|@)"),
+    ('iunreserved', r"(?:[a-zA-Z0-9._~-]|{ucschar})"),
+    ('iprivate', r"[\uE000-\uF8FF\U000F0000-\U000FFFFD\U00100000-\U0010FFFD]"),
+    ('ucschar', (r"[\xA0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF"
+                 r"\U00010000-\U0001FFFD\U00020000-\U0002FFFD"
+                 r"\U00030000-\U0003FFFD\U00040000-\U0004FFFD"
+                 r"\U00050000-\U0005FFFD\U00060000-\U0006FFFD"
+                 r"\U00070000-\U0007FFFD\U00080000-\U0008FFFD"
+                 r"\U00090000-\U0009FFFD\U000A0000-\U000AFFFD"
+                 r"\U000B0000-\U000BFFFD\U000C0000-\U000CFFFD"
+                 r"\U000D0000-\U000DFFFD\U000E1000-\U000EFFFD]")),
 
 )
 
