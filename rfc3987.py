@@ -16,20 +16,28 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
+r"""
 Parsing and validation of URIs (RFC 3896) and IRIs (RFC 3987).
 
 This module provides regular expressions according to `RFC 3986 "Uniform 
-Resource Identifier (URI): Generic Syntax" <http://tools.ietf.org/html/rfc3986>`_
-and `RFC 3987 "Internationalized Resource Identifiers (IRIs)"
-<http://tools.ietf.org/html/rfc3987>`_, and utilities for composition and
-relative resolution of references:
+Resource Identifier (URI): Generic Syntax"
+<http://tools.ietf.org/html/rfc3986>`_ and `RFC 3987 "Internationalized
+Resource Identifiers (IRIs)" <http://tools.ietf.org/html/rfc3987>`_, and
+utilities for composition and relative resolution of references.
 
 
-**patterns**
-    A dict of regular expressions keyed by `rule names for URIs`_ and
-    `rule names for IRIs`_. ::
+API
+---
 
+`patterns`
+    A dict of regular expressions (patterns) keyed by `rule names for URIs`_
+    and `rule names for IRIs`_.
+    
+    Patterns are `str` instances (be it in python 2.x or 3.x) containing ASCII
+    characters only. They can be compiled with regex_, without need for 
+    any particular compilation flag::
+    
+        >>> import regex
         >>> uri = regex.compile('^%s$' % patterns['URI'])
         >>> m = uri.match('http://tools.ietf.org/html/rfc3986#appendix-A')
         >>> d = m.groupdict()
@@ -44,26 +52,77 @@ relative resolution of references:
         >>> assert regex.match('^%s$' % patterns['IRI'], smp)
         >>> assert not regex.match('^%s$' % patterns['relative_ref'], '#f#g')
 
-**compose**
+        
+    Alternatively, the standard library re_ module can be used *provided that*:
+
+      - ``\u`` and ``\U`` escapes are preprocessed (see `issue3665
+        <http://bugs.python.org/issue3665>`_)::
+        
+          >>> import re, sys, ast
+          >>> re.compile(patterns['ucschar']) #doctest:+IGNORE_EXCEPTION_DETAIL
+          Traceback (most recent call last):
+            ...
+            File "/usr/lib/python2.6/re.py", line 245, in _compile
+              raise error, v # invalid expression
+          error: bad character range
+          >>> tpl = 'u"%s"' if sys.version_info[0] < 3 else '"%s"'
+          >>> utext_pattern = ast.literal_eval(tpl % patterns['ucschar'])
+          >>> assert re.compile(utext_pattern)
+
+      - named capture groups do not occur on multiple branches of an
+        alternation::
+
+          >>> re.compile(patterns['path']) #doctest:+IGNORE_EXCEPTION_DETAIL
+          Traceback (most recent call last):
+            ...
+            File "/usr/lib/python2.6/re.py", line 245, in _compile
+              raise error, v # invalid expression
+          error: redefinition of group name 'path' as group 2; was group 1
+          >>> pat = format_patterns(path='outermost_group_name')['path']
+          >>> assert re.compile(pat)
+
+        
+`format_patterns`
+    {format_patterns.__doc__}
+        
+`compose`
     {compose.__doc__}
 
-**resolve**
+`resolve`
     {resolve.__doc__}
 
 
+What's new
+----------
+
+version 1.3.0:
+
+- python 3.x compatibility
+- format_patterns 
+
+version 1.2.1:
+
+- compose, resolve
+
+      
+.. _re: http://docs.python.org/library/re
+.. _regex: http://pypi.python.org/pypi/regex
 .. _rule names for URIs: http://tools.ietf.org/html/rfc3986#appendix-A
 .. _rule names for IRIs: http://tools.ietf.org/html/rfc3987#section-2.2
 
 """
-__version__ = '1.2.1'
+__version__ = '1.3.0'
+
+try:
+    basestring
+except NameError:
+    basestring = str
 
 try:
     import regex
 except ImportError:
     from warnings import warn
-    warn('Could not import regex. The stdlib re (at least until python 3.2) '
-         'cannot compile most regular expressions in this module (reusing '
-         'capture group names on different branches of an alternation).')
+    warn('Could not import regex.')
     del warn
 
 __all__ = ('patterns', 'compose', 'resolve')
@@ -211,33 +270,41 @@ _iri_rules = (
 )
 
 
-def _format_patterns(named_capture_groups):
-    groups = dict((k, n.split()[0]) for n in named_capture_groups
-                  for k in n.split()[1:] or [n])
+def format_patterns(**names):
+    """Returns a dict of regular expressions keyed by rule name.
+
+    By default, the formatted patterns contain no named capture groups.
+    To wrap the pattern of a rule in a named group, pass a keyword 
+    argument of the form rule_name='group_name'.
+    For a useful set of group names, see also `patterns`.
+    """
     formatted = {}
     for name, pat in _common_rules[::-1] + _uri_rules[::-1] + _iri_rules[::-1]:
-        if name in groups:
-            pat = '(?P<%s>%s)' % (groups[name], pat)
+        if name in names:
+            pat = '(?P<%s>%s)' % (names[name], pat)
         formatted[name] = pat.format(**formatted)
     return formatted
 
+DEFAULT_GROUP_NAMES = dict(
+        (2*[n] for n in [
+                'scheme', 'port',
+                'IPv6address', 'IPv4address', 'IPvFuture',
+                'URI_reference',
+                'URI', 'absolute_URI', 'relative_ref', 'relative_part',
+                'authority', 'host', 'userinfo', 'reg_name',
+                'query', 'fragment',
+                'IRI_reference',
+                'IRI', 'absolute_IRI', 'irelative_ref', 'irelative_part',
+                'iauthority', 'ihost', 'iuserinfo', 'ireg_name',
+                'iquery', 'ifragment',
+                ]),
+        path_abempty='path', path_absolute='path', path_noscheme='path',
+        path_rootless='path', path_empty='path',
+        ipath_abempty='ipath', ipath_absolute='ipath', ipath_noscheme='ipath',
+        ipath_rootless='ipath', ipath_empty='ipath')
+
 #: mapping of rfc3986 / rfc3987 rule names to regular expressions
-patterns = _format_patterns(named_capture_groups=[
-        'scheme', 'port',
-        'IPv6address', 'IPv4address', 'IPvFuture',
-        'URI_reference',
-        'URI', 'absolute_URI', 'relative_ref', 'relative_part',
-        'authority', 'host', 'userinfo', 'reg_name',
-        ('path path_abempty path_absolute path_noscheme'
-         ' path_rootless path_empty'),
-        'query', 'fragment',
-        'IRI_reference',
-        'IRI', 'absolute_IRI', 'irelative_ref', 'irelative_part',
-        'iauthority', 'ihost', 'iuserinfo', 'ireg_name',
-        ('ipath ipath_abempty ipath_absolute ipath_noscheme'
-         ' ipath_rootless ipath_empty'),
-        'iquery', 'ifragment',
-        ])
+patterns = format_patterns(**DEFAULT_GROUP_NAMES)
 
 
 def _get_compiled_pattern(rule='^%(IRI_reference)s$'):
@@ -321,7 +388,7 @@ def resolve(base, uriref, strict=True, return_parts=False):
         ...     "g/../h"        :  "http://a/b/c/h",
         ...     "g;x=1/./y"     :  "http://a/b/c/g;x=1/y",
         ...     "g;x=1/../y"    :  "http://a/b/c/y",
-        ...     }.iteritems():
+        ...     }.items():
         ...     assert resolve(base, relative) == resolved
 
     
@@ -337,6 +404,8 @@ def resolve(base, uriref, strict=True, return_parts=False):
         if not m:
             raise ValueError('Invalid base IRI %r.' % base)
         B = m.groupdict()
+    else:
+        B = dict(base)
     _i2u(B)
     if not B.get('scheme'):
         raise ValueError('Expected an IRI (with scheme), not %r.' % base)
@@ -346,6 +415,8 @@ def resolve(base, uriref, strict=True, return_parts=False):
         if not m:
             raise ValueError('Invalid IRI reference %r.' % uriref)
         R = m.groupdict()
+    else:
+        R = dict(uriref)
     _i2u(R)
     
     _last_segment = _get_compiled_pattern('(?<=^|/)%(segment)s$')
