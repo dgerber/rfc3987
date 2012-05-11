@@ -29,62 +29,19 @@ utilities for composition and relative resolution of references.
 API
 ---
 
+`get_compiled_pattern`
+    {get_compiled_pattern.__doc__}
+
+`parse`
+    {parse.__doc__}
+    
 `patterns`
-    A dict of regular expressions (patterns) keyed by `rule names for URIs`_
-    and `rule names for IRIs`_.
-    
-    Patterns are `str` instances (be it in python 2.x or 3.x) containing ASCII
-    characters only. They can be compiled with regex_, without need for 
-    any particular compilation flag::
-    
-        >>> import regex
-        >>> uri = regex.compile('^%s$' % patterns['URI'])
-        >>> m = uri.match('http://tools.ietf.org/html/rfc3986#appendix-A')
-        >>> d = m.groupdict()
-        >>> assert all([ d['scheme'] == 'http',
-        ...              d['authority'] == 'tools.ietf.org',
-        ...              d['path'] == '/html/rfc3986',
-        ...              d['query'] == None,
-        ...              d['fragment'] == 'appendix-A' ])
-        >>> from unicodedata import lookup
-        >>> smp = 'urn:' + lookup('OLD ITALIC LETTER A')  # U+00010300
-        >>> assert not uri.match(smp)
-        >>> assert regex.match('^%s$' % patterns['IRI'], smp)
-        >>> assert not regex.match('^%s$' % patterns['relative_ref'], '#f#g')
+    A dict of regular expressions keyed by `rule names for URIs`_ and
+    `rule names for IRIs`_. 
 
-        
-    Alternatively, the standard library re_ module can be used *provided that*:
-
-      - ``\u`` and ``\U`` escapes are preprocessed (see `issue3665
-        <http://bugs.python.org/issue3665>`_)::
-        
-          >>> import re, sys, ast
-          >>> re.compile(patterns['ucschar']) #doctest:+IGNORE_EXCEPTION_DETAIL
-          Traceback (most recent call last):
-            ...
-            File "/usr/lib/python2.6/re.py", line 245, in _compile
-              raise error, v # invalid expression
-          error: bad character range
-          >>> tpl = 'u"%s"' if sys.version_info[0] < 3 else '"%s"'
-          >>> utext_pattern = ast.literal_eval(tpl % patterns['ucschar'])
-          >>> assert re.compile(utext_pattern)
-
-      - named capture groups do not occur on multiple branches of an
-        alternation::
-
-          >>> re.compile(patterns['path']) #doctest:+IGNORE_EXCEPTION_DETAIL
-          Traceback (most recent call last):
-            ...
-            File "/usr/lib/python2.6/re.py", line 245, in _compile
-              raise error, v # invalid expression
-          error: redefinition of group name 'path' as group 2; was group 1
-          >>> pat = format_patterns(path='outermost_group_name')['path']
-          >>> assert re.compile(pat)
-
-        
 `format_patterns`
     {format_patterns.__doc__}
-        
+
 `compose`
     {compose.__doc__}
 
@@ -92,8 +49,13 @@ API
     {resolve.__doc__}
 
 
+
 What's new
 ----------
+
+version 1.3.1:
+
+- some re_ compatibility: get_compiled_pattern, parse
 
 version 1.3.0:
 
@@ -111,7 +73,7 @@ version 1.2.1:
 .. _rule names for IRIs: http://tools.ietf.org/html/rfc3987#section-2.2
 
 """
-__version__ = '1.3.0'
+__version__ = '1.3.1dev'
 
 try:
     basestring
@@ -119,13 +81,14 @@ except NameError:
     basestring = str
 
 try:
-    import regex
+    import regex as _re
+    REGEX = True
 except ImportError:
-    from warnings import warn
-    warn('Could not import regex.')
-    del warn
+    import re as _re
+    REGEX = False
 
-__all__ = ('patterns', 'compose', 'resolve')
+__all__ = ('patterns', 'format_patterns', 'get_compiled_pattern',
+           'compose', 'resolve')
 
 
 _common_rules = (
@@ -168,13 +131,12 @@ _uri_rules = (
 
     ########   REFERENCES   ########
     ('URI_reference',   r"(?:{URI}|{relative_ref})"),
-    
     ('URI',             r"{absolute_URI}(?:\#{fragment})?"),
     ('absolute_URI',    r"{scheme}:{hier_part}(?:\?{query})?"),
+    ('relative_ref',    r"{relative_part}(?:\?{query})?(?:\#{fragment})?"),
+
     ('hier_part',      (r"(?://{authority}{path_abempty}"
                         r"|{path_absolute}|{path_rootless}|{path_empty})")),
-    
-    ('relative_ref',    r"{relative_part}(?:\?{query})?(?:\#{fragment})?"),
     ('relative_part',  (r"(?://{authority}{path_abempty}"
                         r"|{path_absolute}|{path_noscheme}|{path_empty})")),
 
@@ -271,61 +233,188 @@ _iri_rules = (
 
 
 def format_patterns(**names):
-    """Returns a dict of regular expressions keyed by rule name.
+    r"""Returns a dict of patterns (regular expressions) keyed by rule name.
 
-    By default, the formatted patterns contain no named capture groups.
-    To wrap the pattern of a rule in a named group, pass a keyword 
-    argument of the form rule_name='group_name'.
-    For a useful set of group names, see also `patterns`.
+    By default, the formatted patterns contain no named capture groups, but a
+    rule can be wrapped in a named group by passing as keyword argument
+    rule_name='group_name'.
+    
+    The module level dict `patterns` provides expressions built with named
+    groups suitable for simple uses.
+
+    Patterns are `str` instances (be it in python 2.x or 3.x) containing ASCII
+    characters only.
+    
+    They can be compiled with regex_, without need for any particular
+    compilation flag::
+    
+        # >>> import regex
+        # >>> uri = regex.compile('^%s$' % patterns['URI'])
+        # >>> m = uri.match('http://tools.ietf.org/html/rfc3986#appendix-A')
+        # >>> d = m.groupdict()
+        # >>> assert all([ d['scheme'] == 'http',
+        # ...              d['authority'] == 'tools.ietf.org',
+        # ...              d['path'] == '/html/rfc3986',
+        # ...              d['query'] == None,
+        # ...              d['fragment'] == 'appendix-A' ])
+        # >>> from unicodedata import lookup
+        # >>> smp = 'urn:' + lookup('OLD ITALIC LETTER A')  # U+00010300
+        # >>> assert not uri.match(smp)
+        # >>> assert regex.match('^%s$' % patterns['IRI'], smp)
+        # >>> assert not regex.match('^%s$' % patterns['relative_ref'], '#f#g')
+
+    Alternatively, the standard library re_ module can be used *provided that*:
+
+      - ``\u`` and ``\U`` escapes are preprocessed (see `issue3665
+        <http://bugs.python.org/issue3665>`_)::
+        
+          >>> import re, sys, ast
+          >>> re.compile(patterns['ucschar']) #doctest:+IGNORE_EXCEPTION_DETAIL
+          Traceback (most recent call last):
+            ...
+            File "/usr/lib/python2.6/re.py", line 245, in _compile
+              raise error, v # invalid expression
+          error: bad character range
+          >>> tpl = 'u"%s"' if sys.version_info[0] < 3 else '"%s"'
+          >>> utext_pattern = ast.literal_eval(tpl % patterns['ucschar'])
+          >>> assert re.compile(utext_pattern)
+
+      - named capture groups do not occur on multiple branches of an
+        alternation::
+
+          >>> re.compile(patterns['path']) #doctest:+IGNORE_EXCEPTION_DETAIL
+          Traceback (most recent call last):
+            ...
+            File "/usr/lib/python2.6/re.py", line 245, in _compile
+              raise error, v # invalid expression
+          error: redefinition of group name 'path' as group 2; was group 1
+          >>> pat = format_patterns(path='outermost_group_name')['path']
+          >>> assert re.compile(pat)
+
     """
     formatted = {}
     for name, pat in _common_rules[::-1] + _uri_rules[::-1] + _iri_rules[::-1]:
         if name in names:
-            pat = '(?P<%s>%s)' % (names[name], pat)
+            n = names[name]
+            if callable(n):
+                pat = n(pat)
+            else:
+                pat = '(?P<%s>%s)' % (n, pat)
         formatted[name] = pat.format(**formatted)
     return formatted
 
-DEFAULT_GROUP_NAMES = dict(
-        (2*[n] for n in [
-                'scheme', 'port',
-                'IPv6address', 'IPv4address', 'IPvFuture',
-                'URI_reference',
-                'URI', 'absolute_URI', 'relative_ref', 'relative_part',
-                'authority', 'host', 'userinfo', 'reg_name',
-                'query', 'fragment',
-                'IRI_reference',
-                'IRI', 'absolute_IRI', 'irelative_ref', 'irelative_part',
-                'iauthority', 'ihost', 'iuserinfo', 'ireg_name',
-                'iquery', 'ifragment',
-                ]),
-        path_abempty='path', path_absolute='path', path_noscheme='path',
-        path_rootless='path', path_empty='path',
-        ipath_abempty='ipath', ipath_absolute='ipath', ipath_noscheme='ipath',
-        ipath_rootless='ipath', ipath_empty='ipath')
+
+_GROUP_NAMES_BASE = [2*[n] for n in [
+        'scheme', 'port',
+        'IPv6address', 'IPv4address', 'IPvFuture',
+        'URI_reference',
+        'URI', 'absolute_URI', 'relative_ref', 'relative_part',
+        'authority', 'host', 'userinfo', 'reg_name',
+        'query', 'fragment',
+        'IRI_reference',
+        'IRI', 'absolute_IRI', 'irelative_ref', 'irelative_part',
+        'iauthority', 'ihost', 'iuserinfo', 'ireg_name',
+        'iquery', 'ifragment'
+        ]]
+
+DEFAULT_GROUP_NAMES = dict(_GROUP_NAMES_BASE,
+    path_abempty='path', path_absolute='path', path_noscheme='path',
+    path_rootless='path', path_empty='path',
+    ipath_abempty='ipath', ipath_absolute='ipath', ipath_noscheme='ipath',
+    ipath_rootless='ipath', ipath_empty='ipath')
 
 #: mapping of rfc3986 / rfc3987 rule names to regular expressions
 patterns = format_patterns(**DEFAULT_GROUP_NAMES)
 
 
-def _get_compiled_pattern(rule='^%(IRI_reference)s$'):
-    """Returns a compiled pattern object from a rule name or template."""
-    c = _get_compiled_pattern._cache
-    if rule not in c:
-        obj = patterns.get(rule) or rule % patterns
-        c[rule] = regex.compile(obj)
-    return c[rule]
-_get_compiled_pattern._cache = {}
+def _interpret_unicode_escapes(string):
+    import sys, ast
+    tpl = 'u"""{}"""' if sys.version_info[0] < 3 else '"""{}"""'
+    return ast.literal_eval(tpl.format(string))
 
+if not REGEX:
+    #: compilable with re
+    upatterns_no_names = dict((k, _interpret_unicode_escapes(v)) for k,v
+                              in format_patterns().items())
+
+
+def get_compiled_pattern(rule, flags=0):
+    """Returns a compiled pattern object for a rule name or template string.
+
+    If regex_ is available, some subcomponents are captured in named groups. ::
+        
+        >>> uri = get_compiled_pattern('^%(URI)s$')
+        >>> m = uri.match('http://tools.ietf.org/html/rfc3986#appendix-A')
+        >>> d = m.groupdict()
+        >>> if REGEX:
+        ...     assert all([ d['scheme'] == 'http',
+        ...                  d['authority'] == 'tools.ietf.org',
+        ...                  d['path'] == '/html/rfc3986',
+        ...                  d['query'] == None,
+        ...                  d['fragment'] == 'appendix-A' ])
+        >>> from unicodedata import lookup
+        >>> smp = 'urn:' + lookup('OLD ITALIC LETTER A')  # U+00010300
+        >>> assert not uri.match(smp)
+        >>> assert get_compiled_pattern('^%(IRI)s$').match(smp)
+        >>> assert not get_compiled_pattern('^%(relative_ref)s$').match('#f#g')
+
+    """
+    cache, key = get_compiled_pattern.cache, (rule, flags)
+    if key not in cache:
+        pats = patterns if REGEX else upatterns_no_names
+        p = pats.get(rule) or rule % pats  #.format(**pats)
+        cache[key] = _re.compile(p, flags)
+    return cache[key]
+get_compiled_pattern.cache = {}
+
+
+#: http://tools.ietf.org/html/rfc3986#appendix-B
+_iri_non_validating_re = _re.compile(
+    r"^((?P<scheme>[^:/?#]+):)?(//(?P<authority>[^/?#]*))?"
+    r"(?P<path>[^?#]*)(\?(?P<query>[^#]*))?(#(?P<fragment>.*))?")
+
+REFERENCE_RULES = ('IRI_reference', 'IRI', 'absolute_IRI',
+                   'irelative_ref', 'irelative_part',
+                   'URI_reference', 'URI', 'absolute_URI',
+                   'relative_ref', 'relative_part')
+
+def parse(string, rule='IRI_reference'):
+    """Parses `string` according to `rule` into a dict of subcomponents.
+
+    If regex_ is available, any rule is supported; with re_, `rule` must be
+    some special case of 'IRI_reference' (e.g. 'absolute_URI', 
+    'irelative_ref', ...). ::
+    
+        >>> d = parse('http://tools.ietf.org/html/rfc3986#appendix-A',
+        ...           rule='URI')
+        >>> assert all([ d['scheme'] == 'http',
+        ...              d['authority'] == 'tools.ietf.org',
+        ...              d['path'] == '/html/rfc3986',
+        ...              d['query'] == None,
+        ...              d['fragment'] == 'appendix-A' ])
+        
+    """
+    if not REGEX and rule not in REFERENCE_RULES:
+        raise ValueError(rule)
+    if rule:
+        m = get_compiled_pattern('^%%(%s)s$' % rule).match(string)
+        if not m:
+            raise ValueError('%r is not a valid %r.' % (string, rule))
+        if REGEX:
+            return _i2u(m.groupdict())
+    return _i2u(_iri_non_validating_re.match(string).groupdict())
+        
 
 def _i2u(dic):
     for (name, iname) in [('authority', 'iauthority'), ('path', 'ipath'),
                           ('query', 'iquery'), ('fragment', 'ifragment')]:
-        if not dic.get(name):
+        if dic.get(name) is None:
             dic[name] = dic.get(iname)
+    return dic
 
 
-def compose(scheme=None, authority=None, path='', query=None, fragment=None,
-            iauthority=None, ipath='', iquery=None, ifragment=None, **kw):
+def compose(scheme=None, authority=None, path=None, query=None, fragment=None,
+            iauthority=None, ipath=None, iquery=None, ifragment=None, **kw):
     """Returns an URI composed_ from named parts.
 
     .. _composed: http://tools.ietf.org/html/rfc3986#section-5.3
@@ -336,7 +425,7 @@ def compose(scheme=None, authority=None, path='', query=None, fragment=None,
         res += scheme + ':'
     if authority is not None:
         res += '//' + authority
-    res += path
+    res += path or ''
     if query is not None:
         res += '?' + query
     if fragment is not None:
@@ -349,48 +438,9 @@ def resolve(base, uriref, strict=True, return_parts=False):
     
     `Test cases <http://tools.ietf.org/html/rfc3986#section-5.4>`_::
     
-        >>> base = "http://a/b/c/d;p?q"
-        >>> for relative, resolved in {
-        ...     "g:h"           :  "g:h",
-        ...     "g"             :  "http://a/b/c/g",
-        ...     "./g"           :  "http://a/b/c/g",
-        ...     "g/"            :  "http://a/b/c/g/",
-        ...     "/g"            :  "http://a/g",
-        ...     "//g"           :  "http://g",
-        ...     "?y"            :  "http://a/b/c/d;p?y",
-        ...     "g?y"           :  "http://a/b/c/g?y",
-        ...     "#s"            :  "http://a/b/c/d;p?q#s",
-        ...     "g#s"           :  "http://a/b/c/g#s",
-        ...     "g?y#s"         :  "http://a/b/c/g?y#s",
-        ...     ";x"            :  "http://a/b/c/;x",
-        ...     "g;x"           :  "http://a/b/c/g;x",
-        ...     "g;x?y#s"       :  "http://a/b/c/g;x?y#s",
-        ...     ""              :  "http://a/b/c/d;p?q",
-        ...     "."             :  "http://a/b/c/",
-        ...     "./"            :  "http://a/b/c/",
-        ...     ".."            :  "http://a/b/",
-        ...     "../"           :  "http://a/b/",
-        ...     "../g"          :  "http://a/b/g",
-        ...     "../.."         :  "http://a/",
-        ...     "../../"        :  "http://a/",
-        ...     "../../g"       :  "http://a/g",
-        ...     "../../../g"    :  "http://a/g",
-        ...     "../../../../g" :  "http://a/g",
-        ...     "/./g"          :  "http://a/g",
-        ...     "/../g"         :  "http://a/g",
-        ...     "g."            :  "http://a/b/c/g.",
-        ...     ".g"            :  "http://a/b/c/.g",
-        ...     "g.."           :  "http://a/b/c/g..",
-        ...     "..g"           :  "http://a/b/c/..g",
-        ...     "./../g"        :  "http://a/b/g",
-        ...     "./g/."         :  "http://a/b/c/g/",
-        ...     "g/./h"         :  "http://a/b/c/g/h",
-        ...     "g/../h"        :  "http://a/b/c/h",
-        ...     "g;x=1/./y"     :  "http://a/b/c/g;x=1/y",
-        ...     "g;x=1/../y"    :  "http://a/b/c/y",
-        ...     }.items():
+        >>> base = resolve.test_cases_base
+        >>> for relative, resolved in resolve.test_cases.items():
         ...     assert resolve(base, relative) == resolved
-
     
     If `return_parts` is True, returns a dict of named parts instead of
     a string.
@@ -400,28 +450,20 @@ def resolve(base, uriref, strict=True, return_parts=False):
     """
     #base = normalize(base)
     if isinstance(base, basestring):
-        m = _get_compiled_pattern('^%(IRI)s$').match(base)
-        if not m:
-            raise ValueError('Invalid base IRI %r.' % base)
-        B = m.groupdict()
+        B = parse(base, 'IRI')
     else:
-        B = dict(base)
-    _i2u(B)
+        B = _i2u(dict(base))
     if not B.get('scheme'):
         raise ValueError('Expected an IRI (with scheme), not %r.' % base)
     
     if isinstance(uriref, basestring):
-        m = _get_compiled_pattern('%(IRI_reference)s$').match(uriref)
-        if not m:
-            raise ValueError('Invalid IRI reference %r.' % uriref)
-        R = m.groupdict()
+        R = parse(uriref, 'IRI_reference')
     else:
-        R = dict(uriref)
-    _i2u(R)
+        R = _i2u(dict(uriref))
     
-    _last_segment = _get_compiled_pattern('(?<=^|/)%(segment)s$')
-    _dot_segments = _get_compiled_pattern(r'^\.{1,2}(?:/|$)|(?<=/)\.(?:/|$)')
-    _2dots_segments = _get_compiled_pattern(r'/?%(segment)s/\.{2}(?:/|$)')
+    # _last_segment = get_compiled_pattern(r'(?<=^|/)%(segment)s$')
+    _dot_segments = get_compiled_pattern(r'^\.{1,2}(?:/|$)|(?<=/)\.(?:/|$)')
+    _2dots_segments = get_compiled_pattern(r'/?%(segment)s/\.{2}(?:/|$)')
     
     if R['scheme'] and (strict or R['scheme'] != B['scheme']):
         T = R
@@ -440,7 +482,8 @@ def resolve(base, uriref, strict=True, return_parts=False):
                 elif B['authority'] is not None and not B['path']:
                     T['path'] = '/%s' % R['path']
                 else:
-                    T['path'] = _last_segment.sub(R['path'], B['path'])
+                    T['path'] = ''.join(B['path'].rpartition('/')[:2]) + R['path']
+                    # _last_segment.sub(R['path'], B['path'])
                 T['query'] = R['query']
             else:
                 T['path'] = B['path']
@@ -457,6 +500,47 @@ def resolve(base, uriref, strict=True, return_parts=False):
         return T
     else:
         return compose(**T)
+
+resolve.test_cases_base = "http://a/b/c/d;p?q"
+resolve.test_cases = {
+    "g:h"           :  "g:h",
+    "g"             :  "http://a/b/c/g",
+    "./g"           :  "http://a/b/c/g",
+    "g/"            :  "http://a/b/c/g/",
+    "/g"            :  "http://a/g",
+    "//g"           :  "http://g",
+    "?y"            :  "http://a/b/c/d;p?y",
+    "g?y"           :  "http://a/b/c/g?y",
+    "#s"            :  "http://a/b/c/d;p?q#s",
+    "g#s"           :  "http://a/b/c/g#s",
+    "g?y#s"         :  "http://a/b/c/g?y#s",
+    ";x"            :  "http://a/b/c/;x",
+    "g;x"           :  "http://a/b/c/g;x",
+    "g;x?y#s"       :  "http://a/b/c/g;x?y#s",
+    ""              :  "http://a/b/c/d;p?q",
+    "."             :  "http://a/b/c/",
+    "./"            :  "http://a/b/c/",
+    ".."            :  "http://a/b/",
+    "../"           :  "http://a/b/",
+    "../g"          :  "http://a/b/g",
+    "../.."         :  "http://a/",
+    "../../"        :  "http://a/",
+    "../../g"       :  "http://a/g",
+    "../../../g"    :  "http://a/g",
+    "../../../../g" :  "http://a/g",
+    "/./g"          :  "http://a/g",
+    "/../g"         :  "http://a/g",
+    "g."            :  "http://a/b/c/g.",
+    ".g"            :  "http://a/b/c/.g",
+    "g.."           :  "http://a/b/c/g..",
+    "..g"           :  "http://a/b/c/..g",
+    "./../g"        :  "http://a/b/g",
+    "./g/."         :  "http://a/b/c/g/",
+    "g/./h"         :  "http://a/b/c/g/h",
+    "g/../h"        :  "http://a/b/c/h",
+    "g;x=1/./y"     :  "http://a/b/c/g;x=1/y",
+    "g;x=1/../y"    :  "http://a/b/c/y",
+    }
 
 
 def normalize(uri):
