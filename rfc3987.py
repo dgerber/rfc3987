@@ -25,6 +25,8 @@ Resource Identifier (URI): Generic Syntax"
 Resource Identifiers (IRIs)" <http://tools.ietf.org/html/rfc3987>`_, and
 utilities for composition and relative resolution of references.
 
+Tested on python 2.7 and 3.2. Some features require regex_.
+
 
 API
 ---
@@ -34,13 +36,14 @@ API
 
 `parse`
     {parse.__doc__}
-    
-`patterns`
-    A dict of regular expressions keyed by `rule names for URIs`_ and
-    `rule names for IRIs`_. 
 
 `format_patterns`
     {format_patterns.__doc__}
+    
+`patterns`
+    A dict of regular expressions with useful group names.
+    Compilable (with regex_ only) without need for any particular compilation
+    flag.
 
 `compose`
     {compose.__doc__}
@@ -69,8 +72,6 @@ version 1.2.1:
       
 .. _re: http://docs.python.org/library/re
 .. _regex: http://pypi.python.org/pypi/regex
-.. _rule names for URIs: http://tools.ietf.org/html/rfc3986#appendix-A
-.. _rule names for IRIs: http://tools.ietf.org/html/rfc3987#section-2.2
 
 """
 __version__ = '1.3.1dev'
@@ -233,39 +234,21 @@ _iri_rules = (
 
 
 def format_patterns(**names):
-    r"""Returns a dict of patterns (regular expressions) keyed by rule name.
-
-    By default, the formatted patterns contain no named capture groups, but a
-    rule can be wrapped in a named group by passing as keyword argument
-    rule_name='group_name'.
+    r"""Returns a dict of patterns (regular expressions) keyed by
+    `rule names for URIs`_ and `rule names for IRIs`_.
     
-    The module level dict `patterns` provides expressions built with named
-    groups suitable for simple uses.
+    See also the module level dict `patterns`, and `get_compiled_pattern`.
+
+    To wrap a rule in a named capture group, pass as it keyword argument:
+    rule_name='group_name'. By default, the formatted patterns contain no
+    named groups.
 
     Patterns are `str` instances (be it in python 2.x or 3.x) containing ASCII
     characters only.
-    
-    They can be compiled with regex_, without need for any particular
-    compilation flag::
-    
-        # >>> import regex
-        # >>> uri = regex.compile('^%s$' % patterns['URI'])
-        # >>> m = uri.match('http://tools.ietf.org/html/rfc3986#appendix-A')
-        # >>> d = m.groupdict()
-        # >>> assert all([ d['scheme'] == 'http',
-        # ...              d['authority'] == 'tools.ietf.org',
-        # ...              d['path'] == '/html/rfc3986',
-        # ...              d['query'] == None,
-        # ...              d['fragment'] == 'appendix-A' ])
-        # >>> from unicodedata import lookup
-        # >>> smp = 'urn:' + lookup('OLD ITALIC LETTER A')  # U+00010300
-        # >>> assert not uri.match(smp)
-        # >>> assert regex.match('^%s$' % patterns['IRI'], smp)
-        # >>> assert not regex.match('^%s$' % patterns['relative_ref'], '#f#g')
 
-    Alternatively, the standard library re_ module can be used *provided that*:
+    Note that, *if* compiling with the standard library re_ module:
 
-      - ``\u`` and ``\U`` escapes are preprocessed (see `issue3665
+      - ``\u`` and ``\U`` escapes must be preprocessed (see `issue3665
         <http://bugs.python.org/issue3665>`_)::
         
           >>> import re, sys, ast
@@ -279,7 +262,7 @@ def format_patterns(**names):
           >>> utext_pattern = ast.literal_eval(tpl % patterns['ucschar'])
           >>> assert re.compile(utext_pattern)
 
-      - named capture groups do not occur on multiple branches of an
+      - named capture groups cannot occur on multiple branches of an
         alternation::
 
           >>> re.compile(patterns['path']) #doctest:+IGNORE_EXCEPTION_DETAIL
@@ -291,6 +274,8 @@ def format_patterns(**names):
           >>> pat = format_patterns(path='outermost_group_name')['path']
           >>> assert re.compile(pat)
 
+    .. _rule names for URIs: http://tools.ietf.org/html/rfc3986#appendix-A
+    .. _rule names for IRIs: http://tools.ietf.org/html/rfc3987#section-2.2
     """
     formatted = {}
     for name, pat in _common_rules[::-1] + _uri_rules[::-1] + _iri_rules[::-1]:
@@ -334,34 +319,39 @@ def _interpret_unicode_escapes(string):
 
 if not REGEX:
     #: compilable with re
-    upatterns_no_names = dict((k, _interpret_unicode_escapes(v)) for k,v
+    _upatterns_no_names = dict((k, _interpret_unicode_escapes(v)) for k,v
                               in format_patterns().items())
 
 
 def get_compiled_pattern(rule, flags=0):
     """Returns a compiled pattern object for a rule name or template string.
 
-    If regex_ is available, some subcomponents are captured in named groups. ::
+    Usage for validation::
         
         >>> uri = get_compiled_pattern('^%(URI)s$')
-        >>> m = uri.match('http://tools.ietf.org/html/rfc3986#appendix-A')
-        >>> d = m.groupdict()
+        >>> assert uri.match('http://tools.ietf.org/html/rfc3986#appendix-A')
+        >>> from unicodedata import lookup
+        >>> smp = 'urn:' + lookup('OLD ITALIC LETTER A')  # U+00010300
+        >>> assert not uri.match(smp)
+        >>> assert get_compiled_pattern('^%(IRI)s$').match(smp)
+        >>> assert not get_compiled_pattern('^%(relative_ref)s$').match('#f#g')
+    
+    For parsing, some subcomponents are captured in named groups (*only if*
+    regex_ is available, otherwise see `parse`)::
+
+        >>> match = uri.match('http://tools.ietf.org/html/rfc3986#appendix-A')
+        >>> d = match.groupdict()
         >>> if REGEX:
         ...     assert all([ d['scheme'] == 'http',
         ...                  d['authority'] == 'tools.ietf.org',
         ...                  d['path'] == '/html/rfc3986',
         ...                  d['query'] == None,
         ...                  d['fragment'] == 'appendix-A' ])
-        >>> from unicodedata import lookup
-        >>> smp = 'urn:' + lookup('OLD ITALIC LETTER A')  # U+00010300
-        >>> assert not uri.match(smp)
-        >>> assert get_compiled_pattern('^%(IRI)s$').match(smp)
-        >>> assert not get_compiled_pattern('^%(relative_ref)s$').match('#f#g')
 
     """
     cache, key = get_compiled_pattern.cache, (rule, flags)
     if key not in cache:
-        pats = patterns if REGEX else upatterns_no_names
+        pats = patterns if REGEX else _upatterns_no_names
         p = pats.get(rule) or rule % pats  #.format(**pats)
         cache[key] = _re.compile(p, flags)
     return cache[key]
@@ -382,8 +372,9 @@ def parse(string, rule='IRI_reference'):
     """Parses `string` according to `rule` into a dict of subcomponents.
 
     If regex_ is available, any rule is supported; with re_, `rule` must be
-    some special case of 'IRI_reference' (e.g. 'absolute_URI', 
-    'irelative_ref', ...). ::
+    'IRI_reference' or some special case thereof ('IRI', 'absolute_IRI',
+    'irelative_ref', 'irelative_part', 'URI_reference', 'URI', 'absolute_URI',
+    'relative_ref', 'relative_part'). ::
     
         >>> d = parse('http://tools.ietf.org/html/rfc3986#appendix-A',
         ...           rule='URI')
