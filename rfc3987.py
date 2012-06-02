@@ -74,7 +74,7 @@ version 1.2.1:
 .. _regex: http://pypi.python.org/pypi/regex
 
 """
-__version__ = '1.3.1dev'
+__version__ = '1.3.1'
 
 try:
     basestring
