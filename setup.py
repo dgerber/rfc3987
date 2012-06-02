@@ -14,7 +14,7 @@ setup(name='rfc3987',
       url='http://pypi.python.org/pypi/rfc3987',
       download_url='https://github.com/dgerber/rfc3987',
       py_modules=['rfc3987'],
-      requires=['regex'],
+      # requires=['regex'],
       keywords='URI IRI URL rfc3986 rfc3987 validation',
       classifiers=[
         'Development Status :: 5 - Production/Stable',
