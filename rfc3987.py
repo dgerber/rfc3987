@@ -59,6 +59,7 @@ What's new
 version 1.3.1:
 
 - some re_ compatibility: get_compiled_pattern, parse
+- dropped regex_ from setup.py requirements
 
 version 1.3.0:
 
