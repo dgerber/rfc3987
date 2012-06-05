@@ -89,7 +89,7 @@ except ImportError:
     import re as _re
     REGEX = False
 
-__all__ = ('patterns', 'format_patterns', 'get_compiled_pattern',
+__all__ = ('get_compiled_pattern', 'parse', 'format_patterns', 'patterns',
            'compose', 'resolve')
 
 
