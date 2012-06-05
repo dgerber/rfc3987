@@ -31,24 +31,24 @@ Tested on python 2.7 and 3.2. Some features require regex_.
 API
 ---
 
-`get_compiled_pattern`
+**get_compiled_pattern** (rule, flags=0)
     {get_compiled_pattern.__doc__}
 
-`parse`
+**parse** (string, rule='IRI_reference')
     {parse.__doc__}
 
-`format_patterns`
+**format_patterns** (\*\*names)
     {format_patterns.__doc__}
     
-`patterns`
+**patterns**
     A dict of regular expressions with useful group names.
     Compilable (with regex_ only) without need for any particular compilation
     flag.
 
-`compose`
+**compose** (\*\*parts)
     {compose.__doc__}
 
-`resolve`
+**resolve** (base, uriref, strict=True, return_parts=False)
     {resolve.__doc__}
 
 
