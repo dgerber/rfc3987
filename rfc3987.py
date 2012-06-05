@@ -240,7 +240,7 @@ def format_patterns(**names):
     
     See also the module level dict `patterns`, and `get_compiled_pattern`.
 
-    To wrap a rule in a named capture group, pass as it keyword argument:
+    To wrap a rule in a named capture group, pass it as keyword argument:
     rule_name='group_name'. By default, the formatted patterns contain no
     named groups.
 
