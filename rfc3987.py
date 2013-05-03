@@ -27,23 +27,18 @@ utilities for composition and relative resolution of references.
 
 Tested on python 2.7 and 3.2. Some features require regex_.
 
+Note: characters beyond the Basic Multilingual Plane are not supported on
+narrow builds (see `issue12729 <http://bugs.python.org/issue12729>`_).
+
 
 API
 ---
 
-**get_compiled_pattern** (rule, flags=0)
-    {get_compiled_pattern.__doc__}
+**match** (string, rule='IRI_reference')
+    {match.__doc__}
 
 **parse** (string, rule='IRI_reference')
     {parse.__doc__}
-
-**format_patterns** (\*\*names)
-    {format_patterns.__doc__}
-    
-**patterns**
-    A dict of regular expressions with useful group names.
-    Compilable (with regex_ only) without need for any particular compilation
-    flag.
 
 **compose** (\*\*parts)
     {compose.__doc__}
@@ -51,10 +46,30 @@ API
 **resolve** (base, uriref, strict=True, return_parts=False)
     {resolve.__doc__}
 
+**patterns**
+    A dict of regular expressions with useful group names.
+    Compilable (with regex_ only) without need for any particular compilation
+    flag.
+
+**[bmp_][u]patterns[_no_names]**
+    Alternative versions of `patterns`.
+    [u]nicode strings without group names for the re_ module.
+    BMP only for narrow builds.
+
+**get_compiled_pattern** (rule, flags=0)
+    {get_compiled_pattern.__doc__}
+
+**format_patterns** (\*\*names)
+    {format_patterns.__doc__}
 
 
 What's new
 ----------
+
+version 1.3.2:
+
+- convenience function `match`
+- patterns restricted to the BMP for narrow builds
 
 version 1.3.1:
 
@@ -75,7 +90,11 @@ version 1.2.1:
 .. _regex: http://pypi.python.org/pypi/regex
 
 """
-__version__ = '1.3.1'
+__version__ = '1.3.2dev'
+
+import sys
+
+NARROW_BUILD = sys.maxunicode == 0xffff
 
 try:
     basestring
@@ -238,7 +257,7 @@ def format_patterns(**names):
     r"""Returns a dict of patterns (regular expressions) keyed by
     `rule names for URIs`_ and `rule names for IRIs`_.
     
-    See also the module level dict `patterns`, and `get_compiled_pattern`.
+    See also the module level dicts of patterns, and `get_compiled_pattern`.
 
     To wrap a rule in a named capture group, pass it as keyword argument:
     rule_name='group_name'. By default, the formatted patterns contain no
@@ -261,7 +280,8 @@ def format_patterns(**names):
           error: bad character range
           >>> tpl = 'u"%s"' if sys.version_info[0] < 3 else '"%s"'
           >>> utext_pattern = ast.literal_eval(tpl % patterns['ucschar'])
-          >>> assert re.compile(utext_pattern)
+          >>> if not NARROW_BUILD:
+          ...     assert re.compile(utext_pattern)
 
       - named capture groups cannot occur on multiple branches of an
         alternation::
@@ -318,10 +338,20 @@ def _interpret_unicode_escapes(string):
     tpl = 'u"""{}"""' if sys.version_info[0] < 3 else '"""{}"""'
     return ast.literal_eval(tpl.format(string))
 
-if not REGEX:
-    #: compilable with re
-    _upatterns_no_names = dict((k, _interpret_unicode_escapes(v)) for k,v
-                              in format_patterns().items())
+patterns_no_names = format_patterns()
+
+# if not REGEX:
+#: patterns compilable with re
+upatterns_no_names = dict((k, _interpret_unicode_escapes(v)) for k,v
+                          in format_patterns().items())
+
+_bmp = lambda s: _re.sub(r'\\U[0-9A-F]{8}-\\U[0-9A-F]{8}', '', s)
+#: patterns restricted to the basic multilingual plane
+#: compilable on narrow build
+bmp_patterns = dict((k, _bmp(v)) for k,v in patterns.items())
+#: compilable on narrow build with re
+bmp_upatterns_no_names = dict((k, _interpret_unicode_escapes(_bmp(v)))
+                              for k,v in patterns_no_names.items())
 
 
 def get_compiled_pattern(rule, flags=0):
@@ -334,9 +364,10 @@ def get_compiled_pattern(rule, flags=0):
         >>> from unicodedata import lookup
         >>> smp = 'urn:' + lookup('OLD ITALIC LETTER A')  # U+00010300
         >>> assert not uri.match(smp)
-        >>> assert get_compiled_pattern('^%(IRI)s$').match(smp)
+        >>> m = get_compiled_pattern('^%(IRI)s$').match(smp)
+        >>> assert NARROW_BUILD == (not m)
         >>> assert not get_compiled_pattern('^%(relative_ref)s$').match('#f#g')
-    
+
     For parsing, some subcomponents are captured in named groups (*only if*
     regex_ is available, otherwise see `parse`)::
 
@@ -349,14 +380,24 @@ def get_compiled_pattern(rule, flags=0):
         ...                  d['query'] == None,
         ...                  d['fragment'] == 'appendix-A' ])
 
+    On narrow builds, non-BMP characters are excluded.
+
     """
     cache, key = get_compiled_pattern.cache, (rule, flags)
     if key not in cache:
-        pats = patterns if REGEX else _upatterns_no_names
-        p = pats.get(rule) or rule % pats  #.format(**pats)
+        if NARROW_BUILD:
+            pats = bmp_patterns if REGEX else bmp_upatterns_no_names
+        else:
+            pats = patterns if REGEX else upatterns_no_names
+        p = pats.get(rule) or rule % pats
         cache[key] = _re.compile(p, flags)
     return cache[key]
 get_compiled_pattern.cache = {}
+
+
+def match(string, rule='IRI_reference'):
+    """Returns a match object or None."""
+    return get_compiled_pattern('^%%(%s)s$' % rule).match(string)
 
 
 #: http://tools.ietf.org/html/rfc3986#appendix-B
@@ -372,6 +413,9 @@ REFERENCE_RULES = ('IRI_reference', 'IRI', 'absolute_IRI',
 def parse(string, rule='IRI_reference'):
     """Parses `string` according to `rule` into a dict of subcomponents.
 
+    If `rule` is None, parse an IRI_reference `without validation
+    <http://tools.ietf.org/html/rfc3986#appendix-B>`_.
+
     If regex_ is available, any rule is supported; with re_, `rule` must be
     'IRI_reference' or some special case thereof ('IRI', 'absolute_IRI',
     'irelative_ref', 'irelative_part', 'URI_reference', 'URI', 'absolute_URI',
@@ -384,12 +428,12 @@ def parse(string, rule='IRI_reference'):
         ...              d['path'] == '/html/rfc3986',
         ...              d['query'] == None,
         ...              d['fragment'] == 'appendix-A' ])
-        
+
     """
-    if not REGEX and rule not in REFERENCE_RULES:
+    if not REGEX and rule and rule not in REFERENCE_RULES:
         raise ValueError(rule)
     if rule:
-        m = get_compiled_pattern('^%%(%s)s$' % rule).match(string)
+        m = match(string, rule)
         if not m:
             raise ValueError('%r is not a valid %r.' % (string, rule))
         if REGEX:
