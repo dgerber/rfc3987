@@ -109,7 +109,7 @@ except ImportError:
     REGEX = False
 
 __all__ = ('get_compiled_pattern', 'parse', 'format_patterns', 'patterns',
-           'compose', 'resolve')
+           'compose', 'resolve', 'match')
 
 
 _common_rules = (
@@ -310,7 +310,7 @@ def format_patterns(**names):
     return formatted
 
 
-_GROUP_NAMES_BASE = [2*[n] for n in [
+_GROUP_NAMES_BASE = [
         'scheme', 'port',
         'IPv6address', 'IPv4address', 'IPvFuture',
         'URI_reference',
@@ -321,9 +321,9 @@ _GROUP_NAMES_BASE = [2*[n] for n in [
         'IRI', 'absolute_IRI', 'irelative_ref', 'irelative_part',
         'iauthority', 'ihost', 'iuserinfo', 'ireg_name',
         'iquery', 'ifragment'
-        ]]
+        ]
 
-DEFAULT_GROUP_NAMES = dict(_GROUP_NAMES_BASE,
+DEFAULT_GROUP_NAMES = dict(zip(_GROUP_NAMES_BASE,_GROUP_NAMES_BASE),
     path_abempty='path', path_absolute='path', path_noscheme='path',
     path_rootless='path', path_empty='path',
     ipath_abempty='ipath', ipath_absolute='ipath', ipath_noscheme='ipath',
