@@ -335,7 +335,7 @@ patterns = format_patterns(**DEFAULT_GROUP_NAMES)
 
 def _interpret_unicode_escapes(string):
     import sys, ast
-    tpl = 'u"""{}"""' if sys.version_info[0] < 3 else '"""{}"""'
+    tpl = 'u"""{0}"""' if sys.version_info[0] < 3 else '"""{}"""'
     return ast.literal_eval(tpl.format(string))
 
 patterns_no_names = format_patterns()
