@@ -27,8 +27,9 @@ utilities for composition and relative resolution of references.
 
 Tested on python 2.7, 3.2 and 3.3. Some features require regex_.
 
-Note: characters beyond the Basic Multilingual Plane are not supported on
-narrow builds (see `issue12729 <http://bugs.python.org/issue12729>`_).
+Note for python<=3.2: characters beyond the Basic Multilingual Plane are not
+supported on narrow builds (see `issue12729
+<http://bugs.python.org/issue12729>`_).
 
 
 API
@@ -70,6 +71,8 @@ version 1.3.2:
 
 - convenience function `match`
 - patterns restricted to the BMP for narrow builds
+- adapted doctests for python 3.3
+- compatibility with python 2.6 (thanks to Thijs Janssen)
 
 version 1.3.1:
 
@@ -90,7 +93,7 @@ version 1.2.1:
 .. _regex: http://pypi.python.org/pypi/regex
 
 """
-__version__ = '1.3.2dev'
+__version__ = '1.3.2'
 
 import sys
 
