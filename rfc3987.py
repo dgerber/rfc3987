@@ -25,7 +25,7 @@ Resource Identifier (URI): Generic Syntax"
 Resource Identifiers (IRIs)" <http://tools.ietf.org/html/rfc3987>`_, and
 utilities for composition and relative resolution of references.
 
-Tested on python 2.7 and 3.2. Some features require regex_.
+Tested on python 2.7, 3.2 and 3.3. Some features require regex_.
 
 Note: characters beyond the Basic Multilingual Plane are not supported on
 narrow builds (see `issue12729 <http://bugs.python.org/issue12729>`_).
@@ -266,34 +266,15 @@ def format_patterns(**names):
     Patterns are `str` instances (be it in python 2.x or 3.x) containing ASCII
     characters only.
 
-    Note that, *if* compiling with the standard library re_ module:
+    Caveats::
 
-      - ``\u`` and ``\U`` escapes must be preprocessed (see `issue3665
-        <http://bugs.python.org/issue3665>`_)::
-        
-          >>> import re, sys, ast
-          >>> re.compile(patterns['ucschar']) #doctest:+IGNORE_EXCEPTION_DETAIL
-          Traceback (most recent call last):
-            ...
-            File "/usr/lib/python2.6/re.py", line 245, in _compile
-              raise error, v # invalid expression
-          error: bad character range
-          >>> tpl = 'u"%s"' if sys.version_info[0] < 3 else '"%s"'
-          >>> utext_pattern = ast.literal_eval(tpl % patterns['ucschar'])
-          >>> if not NARROW_BUILD:
-          ...     assert re.compile(utext_pattern)
+      - with re_, named capture groups cannot occur on multiple branches of an
+        alternation
 
-      - named capture groups cannot occur on multiple branches of an
-        alternation::
+      - with re_ before python 3.3, ``\u`` and ``\U`` escapes must be
+        preprocessed (see `issue3665 <http://bugs.python.org/issue3665>`_)::
 
-          >>> re.compile(patterns['path']) #doctest:+IGNORE_EXCEPTION_DETAIL
-          Traceback (most recent call last):
-            ...
-            File "/usr/lib/python2.6/re.py", line 245, in _compile
-              raise error, v # invalid expression
-          error: redefinition of group name 'path' as group 2; was group 1
-          >>> pat = format_patterns(path='outermost_group_name')['path']
-          >>> assert re.compile(pat)
+      - on narrow builds, character ranges beyond BMP are not supported
 
     .. _rule names for URIs: http://tools.ietf.org/html/rfc3986#appendix-A
     .. _rule names for IRIs: http://tools.ietf.org/html/rfc3987#section-2.2
@@ -334,7 +315,7 @@ patterns = format_patterns(**DEFAULT_GROUP_NAMES)
 
 
 def _interpret_unicode_escapes(string):
-    import sys, ast
+    import ast
     tpl = 'u"""{0}"""' if sys.version_info[0] < 3 else '"""{}"""'
     return ast.literal_eval(tpl.format(string))
 
@@ -361,12 +342,15 @@ def get_compiled_pattern(rule, flags=0):
         
         >>> uri = get_compiled_pattern('^%(URI)s$')
         >>> assert uri.match('http://tools.ietf.org/html/rfc3986#appendix-A')
+        >>> assert not get_compiled_pattern('^%(relative_ref)s$').match('#f#g')
         >>> from unicodedata import lookup
         >>> smp = 'urn:' + lookup('OLD ITALIC LETTER A')  # U+00010300
         >>> assert not uri.match(smp)
         >>> m = get_compiled_pattern('^%(IRI)s$').match(smp)
+
+    On narrow builds, non-BMP characters are (incorreclty) excluded::
+
         >>> assert NARROW_BUILD == (not m)
-        >>> assert not get_compiled_pattern('^%(relative_ref)s$').match('#f#g')
 
     For parsing, some subcomponents are captured in named groups (*only if*
     regex_ is available, otherwise see `parse`)::
@@ -380,7 +364,8 @@ def get_compiled_pattern(rule, flags=0):
         ...                  d['query'] == None,
         ...                  d['fragment'] == 'appendix-A' ])
 
-    On narrow builds, non-BMP characters are excluded.
+        >>> for r in patterns.keys():
+        ...     assert get_compiled_pattern(r)
 
     """
     cache, key = get_compiled_pattern.cache, (rule, flags)
