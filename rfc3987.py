@@ -17,7 +17,7 @@
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 r"""
-Parsing and validation of URIs (RFC 3896) and IRIs (RFC 3987).
+Parsing and validation of URIs (RFC 3986) and IRIs (RFC 3987).
 
 This module provides regular expressions according to `RFC 3986 "Uniform 
 Resource Identifier (URI): Generic Syntax"
