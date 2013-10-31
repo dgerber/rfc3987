@@ -269,13 +269,13 @@ def format_patterns(**names):
     Patterns are `str` instances (be it in python 2.x or 3.x) containing ASCII
     characters only.
 
-    Caveats::
+    Caveats:
 
       - with re_, named capture groups cannot occur on multiple branches of an
         alternation
 
       - with re_ before python 3.3, ``\u`` and ``\U`` escapes must be
-        preprocessed (see `issue3665 <http://bugs.python.org/issue3665>`_)::
+        preprocessed (see `issue3665 <http://bugs.python.org/issue3665>`_)
 
       - on narrow builds, character ranges beyond BMP are not supported
 
