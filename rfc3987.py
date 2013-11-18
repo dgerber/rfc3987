@@ -468,6 +468,13 @@ def resolve(base, uriref, strict=True, return_parts=False):
     
     If `return_parts` is True, returns a dict of named parts instead of
     a string.
+
+    Examples::
+
+        >>> assert resolve('urn:rootless', '../../name') == 'urn:name'
+        >>> assert resolve('urn:root/less', '../../name') == 'urn:/name'
+        >>> assert resolve('http://a/b', 'http:g') == 'http:g'
+        >>> assert resolve('http://a/b', 'http:g', strict=False) == 'http://a/g'
         
     .. _Resolves: http://tools.ietf.org/html/rfc3986#section-5.2
 
@@ -486,7 +493,7 @@ def resolve(base, uriref, strict=True, return_parts=False):
         R = _i2u(dict(uriref))
     
     # _last_segment = get_compiled_pattern(r'(?<=^|/)%(segment)s$')
-    _dot_segments = get_compiled_pattern(r'^\.{1,2}(?:/|$)|(?<=/)\.(?:/|$)')
+    _dot_segments = get_compiled_pattern(r'^(?:\.{1,2}(?:/|$))+|(?<=/)\.(?:/|$)')
     _2dots_segments = get_compiled_pattern(r'/?%(segment)s/\.{2}(?:/|$)')
     
     if R['scheme'] and (strict or R['scheme'] != B['scheme']):
@@ -564,6 +571,10 @@ resolve.test_cases = {
     "g/../h"        :  "http://a/b/c/h",
     "g;x=1/./y"     :  "http://a/b/c/g;x=1/y",
     "g;x=1/../y"    :  "http://a/b/c/y",
+    "g?y/./x"       :  "http://a/b/c/g?y/./x",
+    "g?y/../x"      :  "http://a/b/c/g?y/../x",
+    "g#s/./x"       :  "http://a/b/c/g#s/./x",
+    "g#s/../x"      :  "http://a/b/c/g#s/../x",
     }
 
 
