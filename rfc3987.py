@@ -67,6 +67,10 @@ API
 What's new
 ----------
 
+version 1.3.3:
+
+- fixed a bug in `resolve` which left "../" at the begining of some paths
+
 version 1.3.2:
 
 - convenience function `match`
@@ -93,7 +97,7 @@ version 1.2.1:
 .. _regex: http://pypi.python.org/pypi/regex
 
 """
-__version__ = '1.3.3dev'
+__version__ = '1.3.3'
 
 import sys
 
