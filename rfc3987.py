@@ -19,7 +19,7 @@
 r"""
 Parsing and validation of URIs (RFC 3986) and IRIs (RFC 3987).
 
-This module provides regular expressions according to `RFC 3986 "Uniform 
+This module provides regular expressions according to `RFC 3986 "Uniform
 Resource Identifier (URI): Generic Syntax"
 <http://tools.ietf.org/html/rfc3986>`_ and `RFC 3987 "Internationalized
 Resource Identifiers (IRIs)" <http://tools.ietf.org/html/rfc3987>`_, and
@@ -67,6 +67,10 @@ API
 What's new
 ----------
 
+version 1.3.4:
+
+- allowed for lower case percent encoding
+
 version 1.3.3:
 
 - fixed a bug in `resolve` which left "../" at the begining of some paths
@@ -86,18 +90,18 @@ version 1.3.1:
 version 1.3.0:
 
 - python 3.x compatibility
-- format_patterns 
+- format_patterns
 
 version 1.2.1:
 
 - compose, resolve
 
-      
+
 .. _re: http://docs.python.org/library/re
 .. _regex: http://pypi.python.org/pypi/regex
 
 """
-__version__ = '1.3.3'
+__version__ = '1.3.4'
 
 import sys
 
@@ -148,7 +152,7 @@ _common_rules = (
     ########  CHARACTER CLASSES   ########
     ('unreserved',    r"[a-zA-Z0-9_.~-]"),
     ('reserved',      r"(?:{gen_delims}|{sub_delims})"),
-    ('pct_encoded',   r"%[0-9A-F][0-9A-F]"),
+    ('pct_encoded',   r"%[0-9a-fA-F][0-9a-fA-F]"),
     ('gen_delims',    r"[:/?#[\]@]"),
     ('sub_delims',    r"[!$&'()*+,;=]"),
 
@@ -263,7 +267,7 @@ _iri_rules = (
 def format_patterns(**names):
     r"""Returns a dict of patterns (regular expressions) keyed by
     `rule names for URIs`_ and `rule names for IRIs`_.
-    
+
     See also the module level dicts of patterns, and `get_compiled_pattern`.
 
     To wrap a rule in a named capture group, pass it as keyword argument:
@@ -346,7 +350,7 @@ def get_compiled_pattern(rule, flags=0):
     """Returns a compiled pattern object for a rule name or template string.
 
     Usage for validation::
-        
+
         >>> uri = get_compiled_pattern('^%(URI)s$')
         >>> assert uri.match('http://tools.ietf.org/html/rfc3986#appendix-A')
         >>> assert not get_compiled_pattern('^%(relative_ref)s$').match('#f#g')
@@ -388,7 +392,15 @@ get_compiled_pattern.cache = {}
 
 
 def match(string, rule='IRI_reference'):
-    """Returns a match object or None."""
+    """Convenience function for checking if `string` matches a specific rule.
+
+    Returns a match object or None::
+
+        >>> assert match('%C7X', 'pct_encoded') is None
+        >>> assert match('%C7', 'pct_encoded')
+        >>> assert match('%c7', 'pct_encoded')
+
+    """
     return get_compiled_pattern('^%%(%s)s$' % rule).match(string)
 
 
@@ -412,7 +424,7 @@ def parse(string, rule='IRI_reference'):
     'IRI_reference' or some special case thereof ('IRI', 'absolute_IRI',
     'irelative_ref', 'irelative_part', 'URI_reference', 'URI', 'absolute_URI',
     'relative_ref', 'relative_part'). ::
-    
+
         >>> d = parse('http://tools.ietf.org/html/rfc3986#appendix-A',
         ...           rule='URI')
         >>> assert all([ d['scheme'] == 'http',
@@ -431,7 +443,7 @@ def parse(string, rule='IRI_reference'):
         if REGEX:
             return _i2u(m.groupdict())
     return _i2u(_iri_non_validating_re.match(string).groupdict())
-        
+
 
 def _i2u(dic):
     for (name, iname) in [('authority', 'iauthority'), ('path', 'ipath'),
@@ -463,13 +475,13 @@ def compose(scheme=None, authority=None, path=None, query=None, fragment=None,
 
 def resolve(base, uriref, strict=True, return_parts=False):
     """Resolves_ an `URI reference` relative to a `base` URI.
-    
+
     `Test cases <http://tools.ietf.org/html/rfc3986#section-5.4>`_::
-    
+
         >>> base = resolve.test_cases_base
         >>> for relative, resolved in resolve.test_cases.items():
         ...     assert resolve(base, relative) == resolved
-    
+
     If `return_parts` is True, returns a dict of named parts instead of
     a string.
 
@@ -479,7 +491,7 @@ def resolve(base, uriref, strict=True, return_parts=False):
         >>> assert resolve('urn:root/less', '../../name') == 'urn:/name'
         >>> assert resolve('http://a/b', 'http:g') == 'http:g'
         >>> assert resolve('http://a/b', 'http:g', strict=False) == 'http://a/g'
-        
+
     .. _Resolves: http://tools.ietf.org/html/rfc3986#section-5.2
 
     """
@@ -490,16 +502,16 @@ def resolve(base, uriref, strict=True, return_parts=False):
         B = _i2u(dict(base))
     if not B.get('scheme'):
         raise ValueError('Expected an IRI (with scheme), not %r.' % base)
-    
+
     if isinstance(uriref, basestring):
         R = parse(uriref, 'IRI_reference')
     else:
         R = _i2u(dict(uriref))
-    
+
     # _last_segment = get_compiled_pattern(r'(?<=^|/)%(segment)s$')
     _dot_segments = get_compiled_pattern(r'^(?:\.{1,2}(?:/|$))+|(?<=/)\.(?:/|$)')
     _2dots_segments = get_compiled_pattern(r'/?%(segment)s/\.{2}(?:/|$)')
-    
+
     if R['scheme'] and (strict or R['scheme'] != B['scheme']):
         T = R
     else:
