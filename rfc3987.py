@@ -148,7 +148,7 @@ _common_rules = (
     ########  CHARACTER CLASSES   ########
     ('unreserved',    r"[a-zA-Z0-9_.~-]"),
     ('reserved',      r"(?:{gen_delims}|{sub_delims})"),
-    ('pct_encoded',   r"%[0-9A-F][0-9A-F]"),
+    ('pct_encoded',   r"%[0-9a-fA-F][0-9a-fA-F]"),
     ('gen_delims',    r"[:/?#[\]@]"),
     ('sub_delims',    r"[!$&'()*+,;=]"),
 
