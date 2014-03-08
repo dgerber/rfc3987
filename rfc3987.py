@@ -97,7 +97,7 @@ version 1.2.1:
 .. _regex: http://pypi.python.org/pypi/regex
 
 """
-__version__ = '1.3.3'
+__version__ = '1.3.4dev'
 
 import sys
 
