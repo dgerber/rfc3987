@@ -388,7 +388,15 @@ get_compiled_pattern.cache = {}
 
 
 def match(string, rule='IRI_reference'):
-    """Returns a match object or None."""
+    """Convenience function for checking if `string` matches a specific rule.
+
+    Returns a match object or None::
+
+        >>> assert match('%C7X', 'pct_encoded') is None
+        >>> assert match('%C7', 'pct_encoded')
+        >>> assert match('%c7', 'pct_encoded')
+
+    """
     return get_compiled_pattern('^%%(%s)s$' % rule).match(string)
 
 
