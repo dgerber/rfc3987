@@ -25,12 +25,6 @@ Resource Identifier (URI): Generic Syntax"
 Resource Identifiers (IRIs)" <http://tools.ietf.org/html/rfc3987>`_, and
 utilities for composition and relative resolution of references.
 
-Tested on python 2.7, 3.2 and 3.3. Some features require regex_.
-
-Note for python<=3.2: characters beyond the Basic Multilingual Plane are not
-supported on narrow builds (see `issue12729
-<http://bugs.python.org/issue12729>`_).
-
 
 API
 ---
@@ -62,6 +56,17 @@ API
 
 **format_patterns** (\*\*names)
     {format_patterns.__doc__}
+
+
+Dependencies
+------------
+
+Some features require regex_.
+
+This package is tested on python 2.6, 2.7, 3.2, 3.3 and 3.4.
+Note that in python<=3.2, characters beyond the Basic Multilingual Plane are
+not supported on narrow builds (see `issue12729
+<http://bugs.python.org/issue12729>`_).
 
 
 What's new
