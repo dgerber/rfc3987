@@ -149,17 +149,18 @@ _common_rules = (
                      r"| (?:(?:{h16}:){{,6}}{h16})? ::                      )"
                       ).replace(' ', '')),
     ('ls32',         r"(?:{h16}:{h16}|{IPv4address})"),
-    ('h16',          r"[0-9A-F]{{1,4}}"),
+    ('h16',          r"{hexdig}{{1,4}}"),
     ('IPv4address',  r"(?:{dec_octet}\.){{3}}{dec_octet}"),
     ('dec_octet',    r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"),
-    ('IPvFuture',    r"v[0-9A-F]+\.(?:{unreserved}|{sub_delims}|:)+"),
+    ('IPvFuture',    r"v{hexdig}+\.(?:{unreserved}|{sub_delims}|:)+"),
 
     ########  CHARACTER CLASSES   ########
     ('unreserved',    r"[a-zA-Z0-9_.~-]"),
     ('reserved',      r"(?:{gen_delims}|{sub_delims})"),
-    ('pct_encoded',   r"%[0-9a-fA-F][0-9a-fA-F]"),
+    ('pct_encoded',   r"%{hexdig}{{2}}"),
     ('gen_delims',    r"[:/?#[\]@]"),
     ('sub_delims',    r"[!$&'()*+,;=]"),
+    ('hexdig',        r"[0-9A-Fa-f]"),
 
 )
 
@@ -204,7 +205,6 @@ _uri_rules = (
 
     ########  CHARACTER CLASSES   ########
     ('pchar',         r"(?:{unreserved}|{pct_encoded}|{sub_delims}|:|@)"),
-    ('unreserved',    r"[a-zA-Z0-9._~-]"),
 
 )
 
