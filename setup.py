@@ -16,6 +16,7 @@ setup(name='rfc3987',
       py_modules=['rfc3987'],
       # requires=['regex'],
       keywords='URI IRI URL rfc3986 rfc3987 validation',
+      license='GNU GPLv3+',
       classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
