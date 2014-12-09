@@ -478,6 +478,17 @@ def compose(scheme=None, authority=None, path=None, query=None, fragment=None,
     return res
 
 
+_dot_segments = get_compiled_pattern(r'^(?:\.{1,2}(?:/|$))+|(?<=/)\.(?:/|$)')
+_2dots_segments = get_compiled_pattern(r'/?%(segment)s/\.{2}(?:/|$)')
+
+def _remove_dot_segments(path):
+    path =  _dot_segments.sub('', path)
+    c = 1
+    while c:
+        path, c =  _2dots_segments.subn('/', path, 1)
+    return path
+
+
 def resolve(base, uriref, strict=True, return_parts=False):
     """Resolves_ an `URI reference` relative to a `base` URI.
 
@@ -514,8 +525,6 @@ def resolve(base, uriref, strict=True, return_parts=False):
         R = _i2u(dict(uriref))
 
     # _last_segment = get_compiled_pattern(r'(?<=^|/)%(segment)s$')
-    _dot_segments = get_compiled_pattern(r'^(?:\.{1,2}(?:/|$))+|(?<=/)\.(?:/|$)')
-    _2dots_segments = get_compiled_pattern(r'/?%(segment)s/\.{2}(?:/|$)')
 
     if R['scheme'] and (strict or R['scheme'] != B['scheme']):
         T = R
@@ -544,10 +553,7 @@ def resolve(base, uriref, strict=True, return_parts=False):
                 else:
                     T['query'] = B['query']
         T['fragment'] = R['fragment']
-    T['path'] =  _dot_segments.sub('', T['path'])
-    c = 1
-    while c:
-        T['path'], c =  _2dots_segments.subn('/', T['path'], 1)
+    T['path'] = _remove_dot_segments(T['path'])
     if return_parts:
         return T
     else:
