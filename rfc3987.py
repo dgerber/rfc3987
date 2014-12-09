@@ -109,6 +109,7 @@ version 1.2.1:
 __version__ = '1.3.4'
 
 import sys
+import ast as _ast
 
 NARROW_BUILD = sys.maxunicode == 0xffff
 
@@ -330,10 +331,10 @@ DEFAULT_GROUP_NAMES = dict(zip(_GROUP_NAMES_BASE,_GROUP_NAMES_BASE),
 patterns = format_patterns(**DEFAULT_GROUP_NAMES)
 
 
+_unicode_escapes_tpl = 'u"""{0}"""' if sys.version_info[0] < 3 else '"""{}"""'
+
 def _interpret_unicode_escapes(string):
-    import ast
-    tpl = 'u"""{0}"""' if sys.version_info[0] < 3 else '"""{}"""'
-    return ast.literal_eval(tpl.format(string))
+    return _ast.literal_eval(_unicode_escapes_tpl.format(string))
 
 patterns_no_names = format_patterns()
 
