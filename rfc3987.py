@@ -63,7 +63,7 @@ Dependencies
 
 Some features require regex_.
 
-This package is tested on python 2.6, 2.7, 3.2, 3.3 and 3.4.
+This package is tested on python 2.6, 2.7, 3.2, 3.3, 3.4 and 3.5.
 Note that in python<=3.2, characters beyond the Basic Multilingual Plane are
 not supported on narrow builds (see `issue12729
 <http://bugs.python.org/issue12729>`_).
