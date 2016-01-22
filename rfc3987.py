@@ -105,6 +105,13 @@ version 1.2.1:
 .. _re: http://docs.python.org/library/re
 .. _regex: http://pypi.python.org/pypi/regex
 
+
+Support
+-------
+This is free software. You may show your appreciation with a `donation`_.
+
+.. _donation: http://danielgerber.net/¤#Thanks-for-python-package-rfc3987
+
 """
 __version__ = '1.3.4'
 
