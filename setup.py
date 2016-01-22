@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
+
 import rfc3987
 
 desc, _sep, long_desc = rfc3987.__doc__.partition('.')
