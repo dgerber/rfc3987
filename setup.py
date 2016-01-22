@@ -11,7 +11,7 @@ desc, _sep, long_desc = rfc3987.__doc__.partition('.')
 
 setup(name='rfc3987',
       version= rfc3987.__version__,
-      description=desc,
+      description=desc.strip(),
       long_description=long_desc.lstrip().format(**rfc3987.__dict__),
       author='Daniel Gerber',
       author_email='daniel.g.gerber@gmail.com',
