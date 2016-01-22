@@ -113,7 +113,7 @@ This is free software. You may show your appreciation with a `donation`_.
 .. _donation: http://danielgerber.net/¤#Thanks-for-python-package-rfc3987
 
 """
-__version__ = '1.3.5'
+__version__ = '1.3.6'
 
 import sys
 import ast as _ast
