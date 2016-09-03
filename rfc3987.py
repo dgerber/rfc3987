@@ -84,7 +84,7 @@ version 1.3.4:
 
 version 1.3.3:
 
-- fixed a bug in `resolve` which left "../" at the begining of some paths
+- fixed a bug in `resolve` which left "../" at the beginning of some paths
 
 version 1.3.2:
 
@@ -378,7 +378,7 @@ def get_compiled_pattern(rule, flags=0):
         >>> assert not uri.match(smp)
         >>> m = get_compiled_pattern('^%(IRI)s$').match(smp)
 
-    On narrow builds, non-BMP characters are (incorreclty) excluded::
+    On narrow builds, non-BMP characters are (incorrectly) excluded::
 
         >>> assert NARROW_BUILD == (not m)
 
