@@ -344,7 +344,7 @@ DEFAULT_GROUP_NAMES = dict(zip(_GROUP_NAMES_BASE,_GROUP_NAMES_BASE),
 patterns = format_patterns(**DEFAULT_GROUP_NAMES)
 
 
-_unicode_escapes_tpl = 'u"""{0}"""' if sys.version_info[0] < 3 else '"""{}"""'
+_unicode_escapes_tpl = 'ur"{0}"' if sys.version_info[0] < 3 else 'r"{}"'
 
 def _interpret_unicode_escapes(string):
     return _ast.literal_eval(_unicode_escapes_tpl.format(string))
