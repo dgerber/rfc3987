@@ -121,10 +121,10 @@ This is free software. You may show your appreciation with a `donation`_.
 """
 __version__ = '1.3.7'
 
-import sys
+import sys as _sys
 import ast as _ast
 
-NARROW_BUILD = sys.maxunicode == 0xffff
+NARROW_BUILD = _sys.maxunicode == 0xffff
 
 try:
     basestring
@@ -344,7 +344,7 @@ DEFAULT_GROUP_NAMES = dict(zip(_GROUP_NAMES_BASE,_GROUP_NAMES_BASE),
 patterns = format_patterns(**DEFAULT_GROUP_NAMES)
 
 
-_unicode_escapes_tpl = 'u"""{0}"""' if sys.version_info[0] < 3 else '"""{}"""'
+_unicode_escapes_tpl = 'u"""{0}"""' if _sys.version_info[0] < 3 else '"""{}"""'
 
 def _interpret_unicode_escapes(string):
     return _ast.literal_eval(_unicode_escapes_tpl.format(string))
@@ -626,14 +626,13 @@ def normalize(uri):
 
 
 if __name__ == '__main__':
-    import sys
-    if not sys.argv[1:]:
+    if not _sys.argv[1:]:
         print('Valid arguments are "--all" or rule names from:')
         print('  '.join(sorted(patterns)))
-    elif sys.argv[1] == '--all':
+    elif _sys.argv[1] == '--all':
         for name in patterns:
             print(name + ':')
             print(patterns[name])
     else:
-        for name in sys.argv[1:]:
+        for name in _sys.argv[1:]:
             print(patterns[name])
