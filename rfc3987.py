@@ -344,7 +344,7 @@ patterns = format_patterns(**DEFAULT_GROUP_NAMES)
 
 
 def _interpret_unicode_escapes(string):
-    return string.encode('ascii').decode('unicode-escape')
+    return string.encode('ascii').decode('raw-unicode-escape')
 
 patterns_no_names = format_patterns()
 
