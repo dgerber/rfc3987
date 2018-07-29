@@ -72,6 +72,10 @@ not supported on narrow builds (see `issue12729
 Release notes
 -------------
 
+version 1.3.8:
+
+- fixed deprecated escape sequence
+
 version 1.3.6:
 
 - fixed a bug in IPv6 pattern:
@@ -119,7 +123,7 @@ This is free software. You may show your appreciation with a `donation`_.
 .. _donation: http://danielgerber.net/¤#Thanks-for-python-package-rfc3987
 
 """
-__version__ = '1.3.7'
+__version__ = '1.3.8'
 
 import sys as _sys
 
